@@ -1,0 +1,576 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>better-typo studio</title>
+  <style>
+    :root {
+      --bg: #ffffff; --panel: #fafbfc; --line: #ecedf0;
+      --ink: #1a1d24; --muted: #8a909c; --accent: #2f6bdc; --good: #1f9d5b;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; background: var(--bg); color: var(--ink);
+      font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, -apple-system, "Segoe UI", sans-serif;
+      display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+    }
+
+    /* ── 상단 바 (미니멀) ── */
+    .topbar {
+      display: flex; align-items: center; gap: 14px;
+      padding: 13px 24px; border-bottom: 1px solid var(--line); background: #fff;
+      flex: 0 0 auto;
+    }
+    .brandbox { display: flex; flex-direction: column; gap: 2px; line-height: 1.25; }
+    .brand { font-weight: 700; font-size: 15px; color: var(--ink); letter-spacing: .01em; }
+    .tagline { font-size: 11.5px; color: var(--muted); }
+    .grow { flex: 1; }
+    .btn {
+      background: var(--accent); color: #fff; border: none; border-radius: 8px;
+      padding: 9px 18px; font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: opacity .2s, background .2s;
+    }
+    .btn:hover { background: #2a60c4; }
+    .btn:disabled { opacity: .45; cursor: default; }
+
+    /* ── 본체 ── */
+    .body { flex: 1; display: grid; grid-template-columns: 1fr 312px; min-height: 0; }
+
+    /* 좌: 전체 흰 캔버스 */
+    .canvasWrap { background: #fff; overflow: auto; display: flex; justify-content: center; padding: 52px 48px; }
+    .paper {
+      --font-body: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+      --font-head: "Nanum Myeongjo", "Batang", 바탕, Georgia, "Times New Roman", serif;
+      --ink-title: #14161b; --ink-body: #2b2f37; --ink-sub: #5f6675; --ink-quote: #3f5d78; --ink-cap: #9aa1ad;
+      position: relative; width: 100%; max-width: 720px; align-self: flex-start;
+      background: #fff; color: var(--ink-body); font-family: var(--font-body);
+      padding: 8px 4px 80px;
+    }
+    .paper[contenteditable="true"] { outline: none; }
+    .post { transition: max-width .8s cubic-bezier(.22,1,.36,1); }
+
+    /* 블록 기본(before): 위계 없음 — 모두 같은 크기·웨이트·균일 회색, 어절 중간 끊김 */
+    .blk {
+      font-size: 15px; line-height: 1.3; word-break: break-all; margin: 0 0 9px;
+      color: #565b66; font-weight: 400; letter-spacing: 0; font-style: normal;
+      font-family: var(--font-body);
+      transition: font-size .85s cubic-bezier(.22,1,.36,1), line-height .85s cubic-bezier(.22,1,.36,1),
+                  letter-spacing .85s cubic-bezier(.22,1,.36,1), margin .85s cubic-bezier(.22,1,.36,1),
+                  padding .85s cubic-bezier(.22,1,.36,1), color .6s ease, border-color .6s ease;
+    }
+    .blk:last-child { margin-bottom: 0; }
+
+    /* 전역 토글 */
+    .paper.fix-keepall .blk { word-break: keep-all; overflow-wrap: break-word; }
+    .paper.fix-measure .post { max-width: 40em; }   /* 한글 글자폭≈1em → 약 38자 (§3) */
+    .paper.fix-leading .blk[data-role="body"], .paper.fix-leading .blk[data-role="caption"] { line-height: 1.78; }
+    .paper.fix-leading .blk[data-role="quote"] { line-height: 1.7; }
+    .paper.fix-rhythm .blk[data-role="body"] { margin-bottom: 1.35em; }   /* 단락 세로 리듬 (§10) */
+
+    /* 위계: 크기(§5) + 웨이트 + 명도(§9) + 폰트 페어링(§9) */
+    .blk.on[data-role="title"]    { font-family: var(--font-head); font-size: 40px; line-height: 1.14; letter-spacing: -0.02em; font-weight: 700; color: var(--ink-title); margin-bottom: 6px; }
+    .blk.on[data-role="subtitle"] { font-size: 19px; line-height: 1.45; letter-spacing: -0.003em; font-weight: 600; color: var(--ink-sub); margin-bottom: 30px; }
+    .blk.on[data-role="body"]     { font-size: 17px; font-weight: 400; color: var(--ink-body); margin-bottom: 18px; }
+    /* 목록: 본문보다 좁은 행간 + 항목 간격 축소 + 행잉 인덴트로 한 덩어리 */
+    .blk.on[data-role="list"]     { font-size: 17px; line-height: 1.5; font-weight: 400; color: var(--ink-body); margin: 4px 0; padding-left: 1.3em; text-indent: -1.3em; }
+    .blk.on[data-role="list"] + .blk.on[data-role="list"] { margin-top: 2px; }
+    .blk.on[data-role="quote"]    { font-family: var(--font-head); font-size: 19px; font-style: italic; font-weight: 400; color: var(--ink-quote); border-left: 3px solid #cbd3dd; padding-left: 22px; margin: 28px 0; }
+    .blk.on[data-role="caption"]  { font-size: 13px; font-weight: 500; color: var(--ink-cap); letter-spacing: 0.01em; margin-top: 24px; }
+
+    /* 이미지 영역 제안 (레이아웃) */
+    .imgph {
+      margin: 26px 0; border: 1.5px dashed #c6ccd6; border-radius: 10px;
+      background: repeating-linear-gradient(45deg, #f6f7f9, #f6f7f9 11px, #eef0f3 11px, #eef0f3 22px);
+      aspect-ratio: 16 / 9; display: grid; place-items: center; color: #8a91a0; font-size: 13px;
+      opacity: 0; transform: scale(.97);
+      transition: opacity .55s ease, transform .55s cubic-bezier(.22,1,.36,1);
+    }
+    .imgph.show { opacity: 1; transform: none; }
+    .imgph span { background: #fff; padding: 4px 12px; border-radius: 999px; border: 1px solid #e4e7ec; }
+
+    /* 인라인 수정 강조 */
+    .flash { animation: flash 1.1s ease; }
+    @keyframes flash { 0%{ background:#fff3bf } 100%{ background:transparent } }
+
+    /* 선택 표시 (미니멀) */
+    .selbox {
+      position: absolute; border: 1.5px solid var(--accent); border-radius: 4px;
+      box-shadow: 0 0 0 3px rgba(47,107,220,.10); pointer-events: none;
+      opacity: 0; transition: all .42s cubic-bezier(.4,0,.2,1), opacity .25s; z-index: 5;
+    }
+    .selbox.show { opacity: 1; }
+    .selbox .badge {
+      position: absolute; top: -23px; left: -1px; background: var(--accent); color: #fff;
+      font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 5px; white-space: nowrap;
+    }
+
+    /* 우: 인스펙터 (데코 최소) */
+    .inspector {
+      background: var(--panel); border-left: 1px solid var(--line);
+      padding: 22px 20px; display: flex; flex-direction: column; gap: 18px; overflow: auto;
+    }
+    .insp-h { font-size: 11px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
+
+    /* 진행 단계 체크리스트 */
+    .progress-list { display: flex; flex-direction: column; gap: 13px; margin-top: 10px; }
+    .pgroup .pg-head { display: flex; align-items: baseline; gap: 8px; font-size: 13.5px; color: var(--muted); }
+    .pgroup.active .pg-head { color: var(--ink); }
+    .pg-head .n { font-size: 11px; font-weight: 700; width: 14px; flex: 0 0 14px; color: var(--muted); }
+    .pgroup.active .pg-head .n { color: var(--accent); }
+    .pgroup.done .pg-head .n { color: var(--good); }
+    .pg-head b { font-weight: 600; }
+    .pg-head em { font-style: normal; font-size: 11px; color: var(--muted); margin-left: auto; }
+    .pg-items { list-style: none; margin: 6px 0 0; padding: 0 0 0 22px; display: flex; flex-direction: column; gap: 5px; }
+    .pg-items li { position: relative; font-size: 12.5px; color: #aab0bb; transition: color .3s; }
+    .pg-items li::before { content: ''; position: absolute; left: -13px; top: 6px; width: 5px; height: 5px; border-radius: 50%; background: #d4d8df; transition: background .3s; }
+    .pg-items li.active { color: var(--ink); }
+    .pg-items li.active::before { background: var(--accent); }
+    .pg-items li.done { color: #7b8290; }
+    .pg-items li.done::before { background: var(--good); }
+
+    /* 현재 단계 근거 */
+    .reasonbox { border-top: 1px solid var(--line); padding-top: 16px; opacity: 0; transition: opacity .35s ease; }
+    .reasonbox.show { opacity: 1; }
+    .reasonbox .tag { font-size: 11px; color: var(--accent); letter-spacing: .03em; }
+    .reasonbox h3 { margin: 5px 0 7px; font-size: 15px; color: var(--ink); }
+    .reasonbox .reason { font-size: 13px; line-height: 1.65; color: #5b616c; }
+    .reasonbox .ba { margin-top: 11px; font-size: 11.5px; font-family: ui-monospace, "SFMono-Regular", monospace; display: flex; flex-direction: column; gap: 3px; word-break: break-all; }
+    .reasonbox .ba .b { color: #c0392b; } .reasonbox .ba .a { color: var(--good); }
+    .reasonbox .ref { margin-top: 9px; font-size: 11px; color: var(--muted); }
+
+    .foot { margin-top: auto; display: flex; flex-direction: column; gap: 9px; }
+    .bar { height: 3px; background: var(--line); border-radius: 999px; overflow: hidden; }
+    .bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .5s ease; }
+    .step-meta { font-size: 11.5px; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brandbox">
+      <div class="brand">Better-Typo</div>
+      <div class="tagline">보기도, 읽기도 좋은 글로 다듬어주는 스킬</div>
+    </div>
+    <div class="grow"></div>
+    <button class="btn" id="btnGo">Make it Better
+  </div>
+
+  <div class="body">
+    <!-- 좌: 흰 캔버스 -->
+    <div class="canvasWrap">
+      <div class="paper" id="paper" contenteditable="true" spellcheck="false"><div>단순 구현에서 블로그 문화 루프를 보기까지</div><div>ceal-terview · AX 공유회 블로그 프로세스 회고</div><div>2026-04-22하동훈(Software Engineer)</div><div>이 글은 2026 년에 진행한 공유회의 블로그 프로세스를  회고하는 글입니다. 단순한 기능 구현에서 시작했지만 결국에는 팀의 글쓰기 문화 전체를 다시 보게 되었고, 그 과정에서 배운 것들을 정리해 보려고 합니다 .</div><div>처음에는 단순한 구현 작업이라고 생각했지만, 여러 사람과 대화하고 회의를 거치면서 이 일이 글쓰기 문화 전체를 바꾸는 일이라는 걸 직접 확인할수있었습니다...</div><div>발행 프로세스는 다음 세 단계로 정리된다:</div><div>1.: 글감을 발굴한다</div><div>2.: 초안을 작성하고 리뷰한다</div><div>3.: 반응을 보고 다시 조직에 공유한다</div><div>&gt; 좋은 문서는 내용만으로 완성되지 않는다. 읽는 사람의 눈이 편하게 흐르도록 다듬는 마지막 한 끗이 퀄리티를 만든다.</div><div>작성일: 2026-06-18 · 우리는 Claude Code를 활용해 약 50 % 의 반복 작업을 줄였습니다.</div></div>
+    </div>
+
+    <!-- 우: 인스펙터 -->
+    <aside class="inspector">
+      <div class="insp-h">진행 단계</div>
+      <div class="progress-list" id="progress"></div>
+
+      <div class="reasonbox" id="reasonbox">
+        <div class="tag" id="cardTag"></div>
+        <h3 id="cardTitle">편집 준비</h3>
+        <div class="reason" id="cardReason">왼쪽 캔버스의 글을 6단계로 다듬습니다. ‘개선 시작’을 누르면 단계별 근거가 여기에 표시됩니다.</div>
+        <div class="ba" id="cardBA"></div>
+        <div class="ref" id="cardRef"></div>
+      </div>
+
+      <div class="foot">
+        <div class="bar"><i id="barFill"></i></div>
+        <div class="step-meta" id="stepMeta">대기 중</div>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    // ════ 검출 규칙 (theory.md 재현) ════
+    const UNIT = '년|개월|월|일|시간|시|분|초|원|달러|개|명|회|차|점|위|배|％|%|kg|km|cm|mm|m|g|gb|mb|kb';
+    const ROLE_LABEL = { title:'제목', subtitle:'소제목', body:'본문', list:'목록', quote:'인용', caption:'캡션' };
+    const ROLE_ORDER = ['title','subtitle','body','list','quote','caption'];
+    const STEMS = '할|볼|줄|들|올|갈|날|살|말|될|쓸|길|물|풀|틀|벌';
+    const TYPO = { '역활':'역할','몇일':'며칠','오랫만':'오랜만','금새':'금세','웬지':'왠지','구지':'굳이','어떻해':'어떡해','되요':'돼요','됬':'됐','바램':'바람','왠만':'웬만' };
+
+    function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    function classify(lines){
+      return lines.map((raw, i) => {
+        let text = raw, role = 'body';
+        if (/^>\s?/.test(text)) { role = 'quote'; text = text.replace(/^>\s?/, ''); }
+        else if (/^(\d+[.):]|[-•*‣·]|[①-⑳])\s*\S/.test(text)) role = 'list';   // 번호·기호 목록 항목
+        else if (/^(작성일|작성자|작성|출처|date|by)\b/i.test(text) || (/·/.test(text) && /\d{4}[-.]\d/.test(text))) role = 'caption';
+        else if (i === 0) role = 'title';
+        else if (i === 1 && text.length <= 45 && !/[.!?。]$/.test(text)) role = 'subtitle';
+        return { role, text };
+      });
+    }
+
+    // 비겹침 이슈 검출
+    function detect(text){
+      const ms = [];
+      const add = (re, type) => { let m; re.lastIndex = 0;
+        while ((m = re.exec(text))) { ms.push({ start:m.index, end:m.index+m[0].length, type, raw:m[0], g:m });
+          if (m.index === re.lastIndex) re.lastIndex++; } };
+      // 맞춤법·오타 (§8)
+      add(new RegExp('('+STEMS+')수(있|없)', 'g'), 'spellSpace');
+      Object.keys(TYPO).forEach(k => add(new RegExp(k, 'g'), 'spellWord'));
+      // 띄어쓰기: 날짜+글자 / 글자·숫자+여는괄호 / 닫는괄호+글자
+      add(/(\d{4}-\d{1,2}-\d{1,2})([가-힣A-Za-z(])/g, 'spaceJoin');
+      add(/([가-힣A-Za-z0-9])(\()/g, 'spaceJoin');
+      add(/(\))([가-힣A-Za-z])/g, 'spaceJoin');
+      // 문장부호/공백 (§7)
+      add(/\.{3,}/g, 'ellipsis');
+      add(/(\d+)\.\s?:/g, 'numMarker');   // 어색한 번호 마커 1.: → 1.
+      add(/"([^"\n]{1,100})"/g, 'quote');
+      add(/ +([.,!?;:。，、])/g, 'spacePunct');
+      add(/(?<=[가-힣A-Za-z])([.,!?])(?=[가-힣A-Za-z])/g, 'spaceAfterPunct');  // 다.특히 → 다. 특히
+      add(/ {2,}/g, 'doubleSpace');
+      // 글루 (§1)
+      add(new RegExp('(\\d[\\d,]*)\\s('+UNIT+')(?![A-Za-z가-힣])', 'g'), 'numUnit');
+      ms.sort((a,b) => a.start-b.start || b.end-a.end);
+      const kept = []; let last = -1;
+      for (const m of ms) if (m.start >= last) { kept.push(m); last = m.end; }
+      return kept;
+    }
+
+    // 한 이슈 → 표시/적용 정보
+    function inlineInfo(m, id){
+      let beforeHTML, fixedHTML, before, after, category, label, ref;
+      const t = m.type;
+      if (t === 'doubleSpace') {
+        beforeHTML = '&nbsp;'.repeat(m.raw.length); fixedHTML = ' ';
+        before = '␣'.repeat(m.raw.length); after = '␣'; category='hygiene'; label='이중 공백'; ref='§7';
+      } else if (t === 'spacePunct') {
+        const p = m.g[1], n = m.raw.length - p.length;
+        beforeHTML = '&nbsp;'.repeat(n) + esc(p); fixedHTML = esc(p);
+        before = '␣'+p; after = p; category='hygiene'; label='부호 앞 공백'; ref='§7';
+      } else if (t === 'ellipsis') {
+        beforeHTML = esc(m.raw); fixedHTML = '…'; before = m.raw; after = '…'; category='hygiene'; label='말줄임표'; ref='§7';
+      } else if (t === 'numMarker') {
+        const n = m.g[1]; beforeHTML = esc(m.raw); fixedHTML = esc(n+'.');
+        before = m.raw; after = n+'.'; category='hygiene'; label='번호 마커 정리'; ref='§7';
+      } else if (t === 'quote') {
+        const inner = m.g[1]; beforeHTML = esc(m.raw); fixedHTML = '“'+esc(inner)+'”';
+        before = '"…"'; after = '“…”'; category='hygiene'; label='둥근 따옴표'; ref='§7';
+      } else if (t === 'numUnit') {
+        const num = m.g[1], unit = m.g[2];
+        beforeHTML = esc(num)+' '+esc(unit); fixedHTML = esc(num)+'&nbsp;'+esc(unit);
+        before = num+'␣'+unit; after = num+' '+unit; category='glue'; label='숫자+단위'; ref='§1';
+      } else if (t === 'spellSpace') {
+        const fixed = m.g[1]+' 수 '+m.g[2];
+        beforeHTML = esc(m.raw); fixedHTML = esc(fixed); before = m.raw; after = fixed;
+        category='spell'; label='띄어쓰기(의존명사 ‘수’)'; ref='§8';
+      } else if (t === 'spaceJoin') {
+        const a = m.g[1], b2 = m.g[2];
+        beforeHTML = esc(a)+esc(b2); fixedHTML = esc(a)+' '+esc(b2);
+        before = a+b2; after = a+' '+b2; category='spell'; label='띄어쓰기'; ref='§8';
+      } else if (t === 'spaceAfterPunct') {
+        const p = m.raw;
+        beforeHTML = esc(p); fixedHTML = esc(p)+' ';
+        before = p+'붙음'; after = p+'␣'; category='hygiene'; label='부호 뒤 띄어쓰기'; ref='§7';
+      } else { // spellWord
+        const fixed = TYPO[m.raw];
+        beforeHTML = esc(m.raw); fixedHTML = esc(fixed); before = m.raw; after = fixed;
+        category='spell'; label='맞춤법'; ref='§8';
+      }
+      const apply = () => { const el = document.getElementById(id); if (el){ el.innerHTML = fixedHTML; flash(el); } };
+      return { beforeHTML, type:t, category, label, before, after, ref, apply };
+    }
+
+    // ════ DOM refs ════
+    const paper = document.getElementById('paper');
+    const reasonbox = document.getElementById('reasonbox');
+    const progressEl = document.getElementById('progress');
+    const barFill = document.getElementById('barFill');
+    const stepMeta = document.getElementById('stepMeta');
+    let STEPS = [], idx = 0, running = false, mode = 'edit', selbox = null;
+
+    function flash(el){ el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
+
+    function ensureSelbox(){
+      if (selbox) return selbox;
+      selbox = document.createElement('div');
+      selbox.className = 'selbox';
+      selbox.innerHTML = '<span class="badge"></span>';
+      paper.appendChild(selbox);
+      return selbox;
+    }
+    function selectEl(el, label){
+      if (!el) return;
+      const box = ensureSelbox();
+      const pr = paper.getBoundingClientRect(), br = el.getBoundingClientRect();
+      box.style.top = (br.top - pr.top + paper.scrollTop - 4) + 'px';
+      box.style.left = (br.left - pr.left - 5) + 'px';
+      box.style.width = (br.width + 10) + 'px';
+      box.style.height = (br.height + 8) + 'px';
+      box.querySelector('.badge').textContent = label || '';
+      box.classList.add('show');
+    }
+    function hideSel(){ if (selbox) selbox.classList.remove('show'); }
+
+    // 입력 → 논리적 줄 (소프트 줄바꿈 무시)
+    function getLines(){
+      const clone = paper.cloneNode(true);
+      const sb = clone.querySelector('.selbox'); if (sb) sb.remove();
+      const txt = clone.innerHTML
+        .replace(/<br\s*\/?>/gi, '\n').replace(/<\/(div|p|blockquote|h[1-6]|li)>/gi, '\n')
+        .replace(/<[^>]+>/g, '').replace(/&nbsp;/gi, ' ')
+        .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+      return txt.split(/\n/).map(s => s.trim()).filter(Boolean);
+    }
+
+    // ════ 단계 메타 ════
+    const PHASE_ORDER = ['구조 분석','위계','가독성','레이아웃','맞춤법·오타','정리'];
+    const PHASE_META = {
+      '구조 분석':  { n:1, desc:'제목·소제목·본문·인용·캡션' },
+      '위계':       { n:2, desc:'크기·웨이트·명도·폰트' },
+      '가독성':     { n:3, desc:'줄내림·measure·행간·리듬' },
+      '레이아웃':   { n:4, desc:'이미지 영역 제안' },
+      '맞춤법·오타': { n:5, desc:'띄어쓰기·맞춤법' },
+      '정리':       { n:6, desc:'문장부호·따옴표·글루' },
+    };
+
+    // ════ 빌드: 입력 → 블록 + 단계 ════
+    function buildModel(){
+      const blocks = classify(getLines());
+      const ctx = { n:0, fixes:[] };
+      let html = '';
+      blocks.forEach((b, bi) => {
+        const issues = detect(b.text);
+        let inner = '', cur = 0;
+        for (const m of issues) {
+          inner += esc(b.text.slice(cur, m.start));
+          const id = 'fx' + (ctx.n++);
+          const info = inlineInfo(m, id);
+          inner += `<span class="fixspan" id="${id}">${info.beforeHTML}</span>`;
+          ctx.fixes.push(info);
+          cur = m.end;
+        }
+        inner += esc(b.text.slice(cur));
+        html += `<div class="blk" data-role="${b.role}" id="blk${bi}">${inner}</div>`;
+      });
+
+      paper.setAttribute('contenteditable', 'false');
+      paper.classList.remove('fix-keepall','fix-measure','fix-leading','fix-rhythm');
+      paper.innerHTML = `<div class="post" id="post">${html}</div>`;
+      selbox = null;
+
+      const steps = [];
+
+      // ① 구조 분석
+      const counts = {};
+      blocks.forEach(b => counts[b.role] = (counts[b.role]||0)+1);
+      const summary = ROLE_ORDER.filter(r => counts[r]).map(r => `${ROLE_LABEL[r]} ${counts[r]}`).join(' · ');
+      steps.push({
+        phase:'구조 분석', tag:'structure', title:'구성 항목 분류',
+        reason:'글을 제목·소제목·본문·인용·캡션으로 분류합니다. 항목마다 크기·명도·간격·줄내림 규칙을 다르게 적용하기 위한 토대입니다.',
+        before:'역할 미지정 (모두 같은 회색·크기)', after: summary, ref:'theory §5',
+        apply:() => selectEl(document.getElementById('blk0'), '구조')
+      });
+
+      // ② 위계 — 존재 역할 순서대로
+      const present = ROLE_ORDER.filter(r => blocks.some(b => b.role === r));
+      const scaleNote = {
+        title:    { reason:'제목은 모듈러 스케일 최상단으로 키우고, 본문 산세리프와 대비되는 세리프(명조)로 질감을 바꿉니다. 큰 글자의 벌어짐은 자간 -0.02em로 조이고, 가장 진한 명도로 시선을 먼저 잡습니다.', after:'세리프 40px · 700 · 자간 -0.02em · 최진 명도', ref:'theory §5·§6·§9' },
+        subtitle: { reason:'소제목은 제목과 본문 사이 단계. 세미볼드(600)와 한 단계 옅은 명도로 보조 정보임을 드러냅니다.', after:'19px · 600 · 보조 명도', ref:'theory §5·§9' },
+        body:     { reason:'본문은 가독 기준 크기(17px)·기본 웨이트. 명도는 순흑이 아닌 진회색(#2b2f37)으로 눈부심을 줄입니다.', after:'17px · 400 · 본문 명도', ref:'theory §5·§9' },
+        list:     { reason:'번호·기호 목록은 본문과 다른 덩어리입니다. 행간을 본문보다 좁히고(1.5) 항목 간격을 줄여 한 묶음으로 보이게 하며, 마커를 왼쪽으로 내어 정렬(행잉 인덴트)합니다.', after:'행간 1.5 · 항목 간격 축소 · 행잉 인덴트', ref:'theory §5·§10' },
+        quote:    { reason:'인용은 본문과 분리되도록 세리프 이탤릭·좌측 라인·들여쓰기. 색온도를 살짝 달리해 결을 구분합니다.', after:'세리프 이탤릭 · 좌측 라인', ref:'theory §5·§9' },
+        caption:  { reason:'캡션·메타는 최소 크기·가장 옅은 명도·약한 자간으로 본문 흐름을 방해하지 않게 둡니다.', after:'13px · 500 · 최옅 명도', ref:'theory §5·§6' },
+      };
+      present.forEach(r => {
+        const note = scaleNote[r];
+        steps.push({
+          phase:'위계', tag:'type-scale', title:`${ROLE_LABEL[r]} 위계 적용`,
+          reason:note.reason, before:'15px · 회색 · 위계 없음', after:note.after, ref:note.ref,
+          apply:() => {
+            let first = null;
+            blocks.forEach((b, bi) => { if (b.role === r) { const el = document.getElementById('blk'+bi); el.classList.add('on'); if (!first) first = el; } });
+            if (first) selectEl(first, ROLE_LABEL[r]);
+          }
+        });
+      });
+
+      // ③ 가독성
+      const bodyEl = () => paper.querySelector('.blk[data-role="body"]') || document.getElementById('post');
+      steps.push({ phase:'가독성', tag:'cjk-break', title:'한글 줄내림 (keep-all)',
+        reason:'한글은 어절(공백) 단위로만 줄을 끊어야 깔끔합니다. word-break: keep-all 로 어절 중간·조사 앞 끊김을 막습니다.',
+        before:'word-break: normal', after:'word-break: keep-all', ref:'theory §1',
+        apply:() => { selectEl(bodyEl(), '줄내림'); paper.classList.add('fix-keepall'); } });
+      steps.push({ phase:'가독성', tag:'measure', title:'글줄 길이(measure)',
+        reason:'한글 본문은 한 줄 25–40자가 이상적입니다. CSS의 ch는 숫자 0 폭 기준이라 한글에선 절반쯤으로 좁아져, 한글 글자폭(≈1em)에 맞춰 약 38자 폭으로 잡습니다.',
+        before:'폭 제한 없음', after:'max-width 40em (≈38자)', ref:'theory §3',
+        apply:() => { selectEl(document.getElementById('post'), '글줄 길이'); paper.classList.add('fix-measure'); } });
+      steps.push({ phase:'가독성', tag:'line-height', title:'행간(line-height)',
+        reason:'본문 행간 1.3은 한글에 좁습니다. 권장 1.6–1.8에 맞춰 1.78로 넓혀 눈이 편하게 흐르도록 합니다.',
+        before:'line-height 1.3', after:'line-height 1.78', ref:'theory §4',
+        apply:() => { selectEl(bodyEl(), '행간'); paper.classList.add('fix-leading'); } });
+      steps.push({ phase:'가독성', tag:'rhythm', title:'단락 세로 리듬',
+        reason:'단락 사이 여백을 글자 크기에 비례해 키워 세로 운율을 만듭니다. 문단 덩어리가 분명해져 스캔이 쉬워집니다.',
+        before:'문단 간격 좁음', after:'단락 간격 1.35em', ref:'theory §10',
+        apply:() => { selectEl(bodyEl(), '리듬'); paper.classList.add('fix-rhythm'); } });
+
+      // ④ 레이아웃 — 이미지 영역 제안 (본문 2개 이상일 때 중간 지점)
+      const bodyIdx = blocks.map((b,i) => b.role==='body' ? i : -1).filter(i => i>=0);
+      if (bodyIdx.length >= 2) {
+        const layoutBi = bodyIdx[Math.floor(bodyIdx.length/2)];
+        steps.push({ phase:'레이아웃', tag:'layout', title:'이미지 영역 제안',
+          reason:'본문이 길게 이어지면 시선이 지칩니다. 의미가 끊기는 지점에 시각 요소를 둘 자리를 16:9 사각형으로 제안합니다(실제 이미지는 사람이 채움).',
+          before:'이미지 자리 없음 (긴 텍스트 블록)', after:'본문 중간 16:9 영역 1곳 제안', ref:'theory §11',
+          apply:() => {
+            const target = document.getElementById('blk'+layoutBi);
+            if (!target) return;
+            let ph = document.getElementById('imgph');
+            if (!ph) { ph = document.createElement('div'); ph.className = 'imgph'; ph.id = 'imgph';
+              ph.innerHTML = '<span>이미지 영역 제안 · 16:9</span>'; target.parentNode.insertBefore(ph, target); }
+            requestAnimationFrame(() => ph.classList.add('show'));
+            selectEl(ph, '이미지 영역');
+          } });
+      }
+
+      // 인라인 수정 분류
+      const spell   = ctx.fixes.filter(f => f.category === 'spell');
+      const hygiene = ctx.fixes.filter(f => f.category !== 'spell');
+
+      // ⑤ 맞춤법·오타
+      if (spell.length) {
+        const detail = countLabel(spell);
+        steps.push({ phase:'맞춤법·오타', tag:'spelling', title:'맞춤법·오타 교정',
+          reason:'의존명사 띄어쓰기와 흔한 오타를 교정합니다. 문체는 바꾸지 않고 오류만 손봅니다. (사실 의심·미래 날짜 등은 교정이 아니라 확인 질문으로 남기는 것이 원칙)',
+          before:'교정 전', after:`${detail} — 총 ${spell.length}건`, ref:'theory §8',
+          apply:() => { selectEl(document.getElementById('post'), `맞춤법 ${spell.length}건`); spell.forEach((f,k) => setTimeout(f.apply, k*90)); } });
+      }
+
+      // ⑥ 정리 — 문장부호/따옴표/글루
+      if (hygiene.length) {
+        const detail = countLabel(hygiene);
+        steps.push({ phase:'정리', tag:'hygiene', title:'문장부호 · 공백 정리',
+          reason:'이중공백·부호 앞 공백·말줄임표(…)·둥근 따옴표·숫자+단위 글루를 한 번에 정리합니다. 바뀐 자리마다 잠깐 강조됩니다.',
+          before:'정리 전', after:`${detail} — 총 ${hygiene.length}건`, ref:'theory §7·§1',
+          apply:() => { selectEl(document.getElementById('post'), `정리 ${hygiene.length}건`); hygiene.forEach((f,k) => setTimeout(f.apply, k*80)); } });
+      }
+
+      return { steps, blocks };
+    }
+    function countLabel(fixes){
+      const c = {}; fixes.forEach(f => c[f.label] = (c[f.label]||0)+1);
+      return Object.keys(c).map(k => `${k} ${c[k]}`).join(' · ');
+    }
+
+    // ════ 진행 표시 ════
+    function renderProgress(steps){
+      let html = '';
+      PHASE_ORDER.forEach(ph => {
+        const items = steps.map((s,k) => ({s,k})).filter(o => o.s.phase === ph);
+        if (!items.length) return;
+        const m = PHASE_META[ph];
+        html += `<div class="pgroup" data-ph="${ph}"><div class="pg-head"><span class="n">${m.n}</span><b>${ph}</b></div>`
+              + `<ul class="pg-items">` + items.map(o => `<li id="sli${o.k}">${esc(o.s.title)}</li>`).join('') + `</ul></div>`;
+      });
+      progressEl.innerHTML = html;
+    }
+    function renderOutline(){
+      progressEl.innerHTML = PHASE_ORDER.map(ph => {
+        const m = PHASE_META[ph];
+        return `<div class="pgroup" data-ph="${ph}"><div class="pg-head"><span class="n">${m.n}</span><b>${ph}</b><em>${m.desc}</em></div></div>`;
+      }).join('');
+    }
+    function updateProgress(i){
+      STEPS.forEach((s,k) => { const li = document.getElementById('sli'+k); if (!li) return;
+        li.classList.toggle('done', k < i); li.classList.toggle('active', k === i); });
+      const cur = STEPS[i] ? STEPS[i].phase : null;
+      document.querySelectorAll('.pgroup').forEach(g => {
+        const ph = g.getAttribute('data-ph');
+        const idxs = STEPS.map((s,k) => s.phase===ph ? k : -1).filter(k => k>=0);
+        g.classList.toggle('active', ph === cur);
+        g.classList.toggle('done', idxs.length>0 && idxs.every(k => k < i));
+      });
+    }
+    function markAllDone(){
+      STEPS.forEach((s,k) => { const li = document.getElementById('sli'+k); if (li){ li.classList.add('done'); li.classList.remove('active'); } });
+      document.querySelectorAll('.pgroup').forEach(g => { g.classList.add('done'); g.classList.remove('active'); });
+    }
+
+    // ════ 재생 ════
+    function showCard(s, i){
+      updateProgress(i);
+      reasonbox.classList.remove('show');
+      setTimeout(() => {
+        document.getElementById('cardTag').textContent = s.tag;
+        document.getElementById('cardTitle').textContent = s.title;
+        document.getElementById('cardReason').textContent = s.reason;
+        document.getElementById('cardBA').innerHTML = `<span class="b">− ${s.before}</span><span class="a">＋ ${s.after}</span>`;
+        document.getElementById('cardRef').textContent = s.ref;
+        stepMeta.textContent = `${i+1} / ${STEPS.length} · ${s.phase}`;
+        reasonbox.classList.add('show');
+      }, 150);
+    }
+
+    function refreshGo(){
+      const b = document.getElementById('btnGo');
+      if (mode === 'edit')         { b.textContent = 'Make it Better'; b.disabled = false; }
+      else if (mode === 'running') { b.textContent = '진행 중…';        b.disabled = true;  }
+      else if (mode === 'done')    { b.textContent = '↺ 다시 편집';     b.disabled = false; }
+    }
+    function onGo(){ if (mode==='edit') improve(); else if (mode==='done') editMode(); }
+
+    function next(){
+      if (idx >= STEPS.length){ finish(); return; }
+      const s = STEPS[idx];
+      showCard(s, idx);
+      setTimeout(() => s.apply(), 850);
+      idx++;
+      barFill.style.width = (idx / STEPS.length * 100) + '%';
+    }
+    // 클릭 한 번 → 전 과정 자동 진행
+    function runAll(){
+      if (idx >= STEPS.length){ finish(); return; }
+      mode = 'running'; refreshGo();
+      (function tick(){
+        if (idx >= STEPS.length){ finish(); return; }
+        next();
+        setTimeout(tick, 1150);
+      })();
+    }
+    function finish(){
+      running = false; mode = 'done'; refreshGo();
+      hideSel(); markAllDone();
+      stepMeta.textContent = `완료 · ${STEPS.length}개 항목 적용`;
+    }
+
+    function improve(){
+      const r = buildModel();
+      STEPS = r.steps; idx = 0;
+      renderProgress(STEPS);
+      barFill.style.width = '0';
+      stepMeta.textContent = `6단계 · ${STEPS.length}개 항목`;
+      runAll();   // 클릭 한 번에 끝까지
+    }
+    function editMode(){
+      running = false; mode = 'edit'; refreshGo();
+      const lines = Array.from(paper.querySelectorAll('.blk')).map(b => {
+        const role = b.getAttribute('data-role'); const t = b.textContent;
+        return role === 'quote' ? '> ' + t : t;
+      });
+      if (lines.length) paper.innerHTML = lines.map(l => `<div>${esc(l)}</div>`).join('');
+      paper.setAttribute('contenteditable', 'true');
+      paper.classList.remove('fix-keepall','fix-measure','fix-leading','fix-rhythm');
+      selbox = null;
+      barFill.style.width = '0';
+      stepMeta.textContent = '편집 모드 — 글을 수정한 뒤 ‘개선 시작’';
+      renderOutline();
+      document.getElementById('cardTag').textContent = '';
+      document.getElementById('cardTitle').textContent = '편집 준비';
+      document.getElementById('cardReason').textContent = '왼쪽 캔버스의 글을 6단계로 다듬습니다. ‘개선 시작’을 누르면 단계별 근거가 여기에 표시됩니다.';
+      document.getElementById('cardBA').innerHTML = '';
+      document.getElementById('cardRef').textContent = '';
+      reasonbox.classList.add('show');
+      paper.focus();
+    }
+
+    document.getElementById('btnGo').addEventListener('click', onGo);
+    renderOutline();
+    reasonbox.classList.add('show');
+    refreshGo();
+  </script>
+</body>
+</html>

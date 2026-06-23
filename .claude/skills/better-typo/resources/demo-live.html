@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>better-typo — 직접 입력 데모</title>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --panel: #171a21;
+      --line: #262b36;
+      --ink: #e7e9ee;
+      --muted: #9aa3b2;
+      --accent: #6ea8fe;
+      --good: #4ade80;
+      --warn: #fbbf24;
+      --hl: rgba(110,168,254,.22);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      min-height: 100vh;
+    }
+    /* ── 좌: 입력 / 문서 미리보기 ── */
+    .stage {
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .stage-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: .02em;
+    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: #ef4444; box-shadow: 18px 0 #f59e0b, 36px 0 #22c55e; }
+
+    /* 입력 박스 */
+    .inputbox { display: flex; flex-direction: column; gap: 12px; }
+    .inputbox label { font-size: 13px; color: var(--muted); }
+    .inputbox textarea {
+      width: 100%; min-height: 220px; resize: vertical;
+      background: #11141b; color: var(--ink); border: 1px solid var(--line);
+      border-radius: 12px; padding: 16px 18px; font-size: 15px; line-height: 1.7;
+      font-family: inherit;
+    }
+    .inputbox textarea:focus { outline: none; border-color: var(--accent); }
+    .inputbox .row { display: flex; gap: 10px; }
+    .hint { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+    /* 종이 미리보기 */
+    .paper {
+      background: #fbfbfd;
+      color: #1a1d24;
+      border-radius: 14px;
+      padding: 40px 44px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.45);
+      transition: all .6s cubic-bezier(.4,0,.2,1);
+    }
+    .post { transition: max-width .6s ease; }
+    .post .body {
+      font-size: 15px;
+      line-height: 1.2;
+      word-break: break-all;       /* before: 어절 중간에서 끊김 */
+      transition: line-height .6s ease, max-width .6s ease, font-size .6s ease;
+      margin: 0;
+      white-space: pre-wrap;        /* 입력 줄바꿈 보존 */
+    }
+    .paper.fix-keepall .post .body { word-break: keep-all; overflow-wrap: break-word; }
+    .paper.fix-size .post .body { font-size: 17px; }
+    .paper.fix-measure .post { max-width: 36ch; }
+    .paper.fix-leading .post .body { line-height: 1.75; }
+
+    mark.hl { background: var(--hl); border-radius: 3px; padding: 0 2px; }
+    .fixspan { border-radius: 3px; }
+    .flash { animation: flash 1.1s ease; }
+    @keyframes flash { 0%{background:#fde68a} 100%{background:transparent} }
+
+    /* ── 우: 이론 설명창 ── */
+    .theory {
+      background: var(--panel);
+      border-left: 1px solid var(--line);
+      padding: 32px 28px;
+      display: flex; flex-direction: column; gap: 20px;
+      position: sticky; top: 0; height: 100vh;
+    }
+    .brand { font-weight: 700; font-size: 15px; letter-spacing: .02em; }
+    .brand span { color: var(--accent); }
+    .step-meta { font-size: 12px; color: var(--muted); }
+    .card {
+      background: #1e2129; border: 1px solid var(--line); border-radius: 12px;
+      padding: 18px 18px 16px; opacity: 0; transform: translateY(8px);
+      transition: opacity .5s ease, transform .5s ease;
+    }
+    .card.show { opacity: 1; transform: none; }
+    .card .tag {
+      display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .04em;
+      color: var(--accent); background: rgba(110,168,254,.12);
+      padding: 3px 9px; border-radius: 999px; margin-bottom: 10px;
+    }
+    .card h3 { margin: 0 0 8px; font-size: 16px; }
+    .card .reason { font-size: 13.5px; line-height: 1.7; color: #c8cedb; }
+    .card .ba { margin-top: 12px; font-size: 12.5px; font-family: ui-monospace, monospace; word-break: break-all; }
+    .card .ba .b { color: #fca5a5; }
+    .card .ba .a { color: var(--good); }
+    .card .ref { margin-top: 10px; font-size: 11px; color: var(--muted); }
+    .progress { margin-top: auto; }
+    .bar { height: 4px; background: var(--line); border-radius: 999px; overflow: hidden; }
+    .bar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg,var(--accent),var(--good)); transition: width .5s ease; }
+    .ctrls { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+    button {
+      flex: 1; min-width: 110px; background: #232733; color: var(--ink); border: 1px solid var(--line);
+      border-radius: 9px; padding: 10px; font-size: 13px; cursor: pointer; transition: background .2s;
+    }
+    button:hover { background: #2b3040; }
+    button:disabled { opacity: .4; cursor: default; }
+    button.primary { background: var(--accent); color: #0b1020; border-color: transparent; font-weight: 600; }
+    .done-badge { color: var(--good); font-size: 12px; opacity: 0; transition: opacity .4s; margin-top: 10px; }
+    .done-badge.show { opacity: 1; }
+    .summary { font-size: 12px; color: var(--muted); margin-top: 8px; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <!-- 좌: 입력 + 문서 -->
+  <main class="stage">
+    <div class="stage-head"><span class="dot"></span> better-typo · 직접 입력 데모</div>
+
+    <!-- 입력 모드 -->
+    <div class="inputbox" id="inputbox">
+      <label>개선할 텍스트를 입력하세요 (한글 본문)</label>
+      <textarea id="srcText">이 글은 2026 년에 진행한 공유회의 블로그 프로세스를  회고하는 글입니다. 단순한 기능 구현에서 시작했지만 결국에는 팀의 글쓰기 문화 전체를 다시 보게 되었고, 그 과정에서 배운 것들을 정리해 보려고 합니다 . 특히 줄바꿈 같은 사소해 보이는 부분이 문서의 인상을 얼마나 바꾸는지 직접 확인할 수 있었습니다...
+
+우리는 Claude Code를 활용해 이 과정을 자동화했고, 약 50 % 의 반복 작업을 줄일 수 있었습니다.</textarea>
+      <div class="row">
+        <button id="btnBuild" class="primary">분석 &amp; 개선 ▸</button>
+      </div>
+      <div class="hint">붙여넣은 텍스트에서 이중공백·부호 앞 공백·말줄임표·숫자+단위 분리를 실제로 검출하고,
+        한글 줄내림(keep-all)·글줄 길이·행간을 단계별로 적용합니다.</div>
+    </div>
+
+    <!-- 결과 모드 -->
+    <div class="paper" id="paper" style="display:none">
+      <article class="post">
+        <p class="body" id="postBody"></p>
+      </article>
+    </div>
+  </main>
+
+  <!-- 우: 이론 설명창 -->
+  <aside class="theory">
+    <div class="brand">better<span>·</span>typo</div>
+    <div class="step-meta" id="stepMeta">텍스트를 입력하고 ‘분석 &amp; 개선’을 누르세요</div>
+
+    <div class="card show" id="card">
+      <span class="tag" id="cardTag">대기</span>
+      <h3 id="cardTitle">직접 입력 모드</h3>
+      <div class="reason" id="cardReason">왼쪽에 한글 본문을 붙여넣고 ‘분석 &amp; 개선’을 누르면, 입력 텍스트에서 발견한 문제를 한 항목씩 천천히 고칩니다. 각 단계마다 왜 고치는지 근거(theory §N)를 보여드립니다.</div>
+      <div class="ba" id="cardBA"></div>
+      <div class="ref" id="cardRef"></div>
+    </div>
+
+    <div class="progress">
+      <div class="bar"><i id="barFill"></i></div>
+      <div class="ctrls">
+        <button id="btnAuto" disabled>자동 재생</button>
+        <button id="btnNext" class="primary" disabled>다음 적용 ▸</button>
+        <button id="btnReset">✏ 다시 입력</button>
+      </div>
+      <div class="done-badge" id="doneBadge">✓ 모든 개선 적용 완료 — 문서 퀄리티 향상됨</div>
+      <div class="summary" id="summary"></div>
+    </div>
+  </aside>
+
+  <script>
+    // ───────────────────────────────────────────────────────────
+    // 검출 규칙 (theory.md 기준을 브라우저에서 재현)
+    //   text-replace 류: 이중공백 / 부호 앞 공백 / 말줄임표 / 숫자+단위 glue
+    //   css-rule 류:      keep-all / measure / line-height (문서 전체)
+    // ───────────────────────────────────────────────────────────
+    const UNIT = '년|개월|월|일|시간|시|분|초|원|달러|개|명|회|차|점|위|배|％|%|kg|km|cm|mm|m|g|gb|mb|kb';
+
+    function esc(s){
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+              .replace(/\n/g,'<br>');
+    }
+
+    // 입력 텍스트에서 비겹침 이슈 목록을 수집
+    function detect(text){
+      const ms = [];
+      const add = (re, type) => {
+        let m; re.lastIndex = 0;
+        while ((m = re.exec(text))) {
+          ms.push({ start: m.index, end: m.index + m[0].length, type, raw: m[0], g: m });
+          if (m.index === re.lastIndex) re.lastIndex++;
+        }
+      };
+      add(/\.{3,}/g, 'ellipsis');                         // ... → …
+      add(/ +([.,!?;:。，、])/g, 'spacePunct');            // 부호 앞 공백
+      add(/ {2,}/g, 'doubleSpace');                       // 이중 이상 공백
+      add(new RegExp('(\\d[\\d,]*)\\s(' + UNIT + ')(?![A-Za-z가-힣])', 'g'), 'numUnit'); // 숫자+단위
+
+      ms.sort((a, b) => a.start - b.start || b.end - a.end);
+      const kept = []; let lastEnd = -1;
+      for (const m of ms) { if (m.start >= lastEnd) { kept.push(m); lastEnd = m.end; } }
+      return kept;
+    }
+
+    const REASON = {
+      doubleSpace: {
+        tag: 'punctuation-hygiene', title: '이중 공백 정리',
+        reason: '실수로 들어간 연속 공백은 글의 리듬을 깨뜨립니다. 이중 이상 공백을 단일 공백으로 정규화합니다.',
+        ref: 'theory §7 · 문장부호/공백 정리'
+      },
+      spacePunct: {
+        tag: 'punctuation-hygiene', title: '문장부호 앞 공백 제거',
+        reason: '마침표·쉼표 앞의 공백은 조판 오류입니다. 부호를 앞 글자에 붙여 깔끔하게 만듭니다.',
+        ref: 'theory §7'
+      },
+      ellipsis: {
+        tag: 'punctuation-hygiene', title: '말줄임표 정돈',
+        reason: '마침표 세 개(...)는 한글 조판 관례상 말줄임표 기호(…) 하나로 바꿉니다. 자간이 고르고 한 글자로 처리됩니다.',
+        ref: 'theory §7'
+      },
+      numUnit: {
+        tag: 'cjk-line-break', title: '숫자+단위 묶기',
+        reason: '숫자와 단위가 줄 끝에서 갈라지면 어색합니다. 사이 공백을 비줄바꿈공백(&nbsp;)으로 묶어 항상 한 덩어리로 줄바꿈되게 합니다.',
+        ref: 'theory §1 · 원자 단위 glue'
+      }
+    };
+
+    // 한 이슈 → {beforeHTML, fixedHTML, step}
+    function makeInfo(m, i){
+      const meta = REASON[m.type];
+      let beforeHTML, fixedHTML, before, after;
+      if (m.type === 'doubleSpace') {
+        beforeHTML = '&nbsp;'.repeat(m.raw.length);
+        fixedHTML  = ' ';
+        before = '…' + '␣'.repeat(m.raw.length) + '…';
+        after  = '…␣…';
+      } else if (m.type === 'spacePunct') {
+        const punct = m.g[1];
+        const n = m.raw.length - punct.length;
+        beforeHTML = '&nbsp;'.repeat(n) + esc(punct);
+        fixedHTML  = esc(punct);
+        before = '…' + '␣'.repeat(n) + punct;
+        after  = '…' + punct;
+      } else if (m.type === 'ellipsis') {
+        beforeHTML = esc(m.raw);
+        fixedHTML  = '…';
+        before = m.raw;
+        after  = '…';
+      } else { // numUnit
+        const num = m.g[1], unit = m.g[2];
+        beforeHTML = esc(num) + ' ' + esc(unit);
+        fixedHTML  = esc(num) + '&nbsp;' + esc(unit);
+        before = num + '␣' + unit + ' (분리 가능)';
+        after  = num + ' ' + unit + ' (묶음)';
+      }
+      const step = {
+        tag: meta.tag, title: meta.title, reason: meta.reason, ref: meta.ref,
+        before, after,
+        apply: () => {
+          const el = document.getElementById('fx' + i);
+          if (el) { el.innerHTML = fixedHTML; flash(el); }
+        }
+      };
+      return { beforeHTML, fixedHTML, step };
+    }
+
+    // 입력 → 미리보기 HTML + 단계 배열
+    function build(text){
+      const issues = detect(text);
+      let html = '', cursor = 0, i = 0;
+      const steps = [];
+      for (const m of issues) {
+        html += esc(text.slice(cursor, m.start));
+        const info = makeInfo(m, i);
+        html += `<span class="fixspan" id="fx${i}">${info.beforeHTML}</span>`;
+        steps.push(info.step);
+        cursor = m.end; i++;
+      }
+      html += esc(text.slice(cursor));
+
+      // 문서 전체(css-rule) 단계 — 항상 적용
+      steps.push({
+        tag: 'cjk-break-css', title: '한글 줄내림 규칙 (keep-all)',
+        reason: '한글은 어절 사이로만 줄을 끊어야 깔끔합니다. word-break: keep-all 을 적용해 어절 중간에서 끊기는 현상을 막습니다.',
+        before: 'word-break: normal (어절 중간 끊김)', after: 'word-break: keep-all', ref: 'theory §1 · 한글/CJK 줄내림',
+        apply: () => paper.classList.add('fix-keepall')
+      });
+      steps.push({
+        tag: 'measure', title: '글줄 길이(measure) 조정',
+        reason: '한 줄이 너무 길면 다음 줄을 찾기 어렵습니다. 한글 본문은 한 줄 25–40자가 이상적이라 max-width를 약 36ch로 제한합니다.',
+        before: '제한 없음 (긴 줄)', after: 'max-width: 36ch', ref: 'theory §3 · measure',
+        apply: () => { paper.classList.add('fix-measure'); paper.classList.add('fix-size'); }
+      });
+      steps.push({
+        tag: 'line-height', title: '행간(line-height) 키우기',
+        reason: '본문 행간 1.2는 한글에 너무 좁습니다. 권장 1.6–1.8에 맞춰 1.75로 넓혀 눈이 편하게 흐르도록 합니다.',
+        before: 'line-height: 1.2', after: 'line-height: 1.75', ref: 'theory §4 · 행간',
+        apply: () => paper.classList.add('fix-leading')
+      });
+
+      return { html, steps, textIssues: issues.length };
+    }
+
+    // ─── 재생 제어 ───────────────────────────────────────────────
+    const paper   = document.getElementById('paper');
+    const inputbox = document.getElementById('inputbox');
+    const card    = document.getElementById('card');
+    let STEPS = [], idx = 0, auto = false, timer = null;
+
+    function flash(el){ el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
+
+    function showCard(s, n){
+      card.classList.remove('show');
+      setTimeout(() => {
+        document.getElementById('cardTag').textContent = s.tag;
+        document.getElementById('cardTitle').textContent = s.title;
+        document.getElementById('cardReason').innerHTML = s.reason;
+        document.getElementById('cardBA').innerHTML =
+          `<span class="b">- ${s.before}</span><br><span class="a">+ ${s.after}</span>`;
+        document.getElementById('cardRef').textContent = s.ref;
+        document.getElementById('stepMeta').textContent = `단계 ${n} / ${STEPS.length} — ${s.title}`;
+        card.classList.add('show');
+      }, 180);
+    }
+
+    function next(){
+      if (idx >= STEPS.length){ finish(); return; }
+      const s = STEPS[idx];
+      showCard(s, idx + 1);
+      setTimeout(() => s.apply(), 1100);   // 설명 먼저, 잠시 뒤 적용
+      idx++;
+      document.getElementById('barFill').style.width = (idx / STEPS.length * 100) + '%';
+    }
+
+    function finish(){
+      document.getElementById('doneBadge').classList.add('show');
+      document.getElementById('stepMeta').textContent = `완료 ${STEPS.length} / ${STEPS.length}`;
+      document.getElementById('btnNext').disabled = true;
+      stopAuto();
+    }
+
+    function startAuto(){
+      auto = true; document.getElementById('btnAuto').textContent = '일시정지';
+      timer = setInterval(() => { if (idx >= STEPS.length){ stopAuto(); return; } next(); }, 2600);
+      next();
+    }
+    function stopAuto(){
+      auto = false; clearInterval(timer); document.getElementById('btnAuto').textContent = '자동 재생';
+    }
+
+    function startBuild(){
+      const text = document.getElementById('srcText').value;
+      if (!text.trim()) { document.getElementById('srcText').focus(); return; }
+      const r = build(text);
+      STEPS = r.steps; idx = 0;
+      document.getElementById('postBody').innerHTML = r.html;
+
+      // 모드 전환
+      inputbox.style.display = 'none';
+      paper.style.display = '';
+      paper.className = 'paper';     // before 상태로 리셋
+      document.getElementById('barFill').style.width = '0';
+      document.getElementById('doneBadge').classList.remove('show');
+      document.getElementById('btnAuto').disabled = false;
+      document.getElementById('btnNext').disabled = false;
+      document.getElementById('summary').textContent =
+        `검출: 텍스트 이슈 ${r.textIssues}건 + 문서 규칙 3건 = 총 ${STEPS.length}단계`;
+
+      // 첫 카드
+      const s0 = STEPS[0];
+      showCard(s0, 1); // 대기 카드를 첫 단계 예고로
+      document.getElementById('stepMeta').textContent = `준비됨 — ${STEPS.length}단계`;
+      card.classList.add('show');
+    }
+
+    function resetInput(){
+      stopAuto();
+      paper.style.display = 'none';
+      inputbox.style.display = '';
+      document.getElementById('btnAuto').disabled = true;
+      document.getElementById('btnNext').disabled = true;
+      document.getElementById('doneBadge').classList.remove('show');
+      document.getElementById('barFill').style.width = '0';
+      document.getElementById('summary').textContent = '';
+      document.getElementById('stepMeta').textContent = '텍스트를 입력하고 ‘분석 & 개선’을 누르세요';
+    }
+
+    document.getElementById('btnBuild').addEventListener('click', startBuild);
+    document.getElementById('btnNext').addEventListener('click', () => { if (auto) stopAuto(); next(); });
+    document.getElementById('btnAuto').addEventListener('click', () => auto ? stopAuto() : startAuto());
+    document.getElementById('btnReset').addEventListener('click', resetInput);
+  </script>
+</body>
+</html>

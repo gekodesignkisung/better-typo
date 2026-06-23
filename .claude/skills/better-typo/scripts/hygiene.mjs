@@ -40,6 +40,48 @@ const RULES = [
     fix: () => '…',
     message: '... → … 말줄임표 (theory §7)',
   },
+  {
+    name: 'space-after-punct',
+    // 종결/쉼표 뒤 띄어쓰기 누락 (다.특히 → 다. 특히). 다음 글자가 한글일 때만 → 영문 약어(U.S.) 오탐 방지.
+    re: /(?<=[가-힣A-Za-z])([.,!?])(?=[가-힣])/gu,
+    fix: (m) => m + ' ',
+    message: '문장부호 뒤 띄어쓰기 보완 (theory §7)',
+  },
+  {
+    name: 'straight-quote-double',
+    // 곧은 큰따옴표 → 둥근 따옴표 (한글 조판 관례). 스타일 설정에 따라 끔 가능.
+    re: /"([^"\n]{1,200})"/gu,
+    fix: (m) => '“' + m.slice(1, -1) + '”',
+    message: '곧은 따옴표 → 둥근 따옴표 “ ” (theory §7)',
+  },
+  {
+    name: 'date-word-space',
+    // 날짜 바로 뒤에 글자/괄호가 붙음 (2026-04-22하동훈 → 2026-04-22 하동훈)
+    re: /\d{4}-\d{1,2}-\d{1,2}(?=[가-힣A-Za-z(])/gu,
+    fix: (m) => m + ' ',
+    message: '날짜와 다음 말 띄어쓰기 (theory §8)',
+  },
+  {
+    name: 'space-before-paren',
+    // 여는 괄호 앞에 띄어쓰기 (하동훈(SE) → 하동훈 (SE))
+    re: /[가-힣A-Za-z0-9](?=\()/gu,
+    fix: (m) => m + ' ',
+    message: '여는 괄호 앞 띄어쓰기 (theory §8)',
+  },
+  {
+    name: 'close-paren-word',
+    // 닫는 괄호 뒤에 띄어쓰기 ()다음 → ) 다음)
+    re: /\)(?=[가-힣A-Za-z])/gu,
+    fix: (m) => m + ' ',
+    message: '닫는 괄호 뒤 띄어쓰기 (theory §8)',
+  },
+  {
+    name: 'list-marker-combo',
+    // 어색한 번호 마커 조합: 1.: → 1.  (마침표·콜론 중복)
+    re: /\d+\.\s?:/gu,
+    fix: (m) => m.replace(/\.\s?:/, '.'),
+    message: '어색한 번호 마커 1.: → 1. (theory §7)',
+  },
 ];
 
 export function detectHygiene(text, fileType) {
@@ -63,7 +105,11 @@ export function detectHygiene(text, fileType) {
 
   // 겹침 해소: 같은 텍스트 구간을 두 규칙이 잡으면 하나만 남긴다.
   // 우선순위: 트레일링 공백 제거(완전 제거)가 이중공백 축약보다 강하다.
-  const PRIORITY = { 'trailing-space': 0, 'space-before-punct': 1, 'double-space': 2, 'ascii-ellipsis': 1 };
+  const PRIORITY = {
+    'trailing-space': 0, 'space-before-punct': 1, 'double-space': 2, 'ascii-ellipsis': 1,
+    'space-after-punct': 1, 'straight-quote-double': 1, 'date-word-space': 1,
+    'space-before-paren': 1, 'close-paren-word': 1, 'list-marker-combo': 1,
+  };
   raw.sort((a, b) => a.at - b.at || PRIORITY[a.rule] - PRIORITY[b.rule]);
   const kept = [];
   let lastEnd = -1;

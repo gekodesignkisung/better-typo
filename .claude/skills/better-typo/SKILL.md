@@ -47,14 +47,16 @@ prose/protected 스팬을 얻는다. **protected(코드·인라인코드·URL·�
 - Playwright 불가 시: 정적 폴백 — `cjk-break-css`(keep-all 누락)와 숫자+단위 glue만, 고아 탐지는 생략.
 
 ### 4. Detect
-- **결정적(스크립트)**:
-  - `node scripts/hygiene.mjs <file>` → 문장부호/공백 이슈
+- **결정적(스크립트)** — 형태로 확정되는 안전한 것만:
+  - `node scripts/hygiene.mjs <file>` → 문장부호/공백 + **기계적 띄어쓰기**: 이중공백·부호 앞/뒤 띄어쓰기(`다.특히`→`다. 특히`)·둥근 따옴표·말줄임표·날짜+말·괄호 앞뒤 띄어쓰기 (theory §7~§8 안전 부분집합)
   - probe 결과를 `evaluateMeasurements()`(`scripts/measure.mjs`)에 넣어 measure/line-height/type-scale/letter-spacing 이슈
   - `findAtomicSpaces()`(`scripts/lib/unit-rules.mjs`)로 숫자+단위 등 원자 단위 glue 후보
-- **판단(LLM = 너)**:
+- **판단(LLM = 너)** — 문맥·미학이 필요한 것:
   - `cjk-line-break`: probe의 `lines[].lastWord`를 보고, 줄 끝에서 어절/의미 단위가 부자연스럽게 끊겼는지 판단. glue할 공백의 소스 오프셋을 골라 `insert-nbsp` fix 작성.
   - `orphan-widow`: 마지막 줄 글자수 ≤4(theory §2)면 직전 공백을 nbsp로.
-  - `spelling`: prose를 읽고 오타·맞춤법 교정안(`text-replace`). 미래 날짜 등 사실 의심은 *교정이 아니라 질문*으로.
+  - `hierarchy`(theory §5·§6·§9): 역할별 type-scale·웨이트·**명도 램프**·**폰트 페어링**(세리프 제목/인용 + 산세리프 본문) 제안.
+  - `paragraph-rhythm`(§10): 단락 간 세로 여백 운율. `layout-image`(§11): 긴 본문 중간에 이미지 영역 위치/비율 제안(자동 삽입 금지).
+  - `spelling`: prose를 읽고 **문맥 의존 띄어쓰기**(의존명사·보조용언·합성어)·오타·맞춤법 교정안(`text-replace`). 한글 맞춤법·국립국어원 기준. 미래 날짜 등 사실 의심은 *교정이 아니라 질문*으로.
   - `cjk-break-css`: 본문에 `word-break: keep-all` 없으면 CSS 제안.
 
 ### 5. Propose — 이슈를 result.json으로
@@ -83,7 +85,7 @@ probe가 각 시각적 줄의 마지막 단어를 준다. 다음이면 나쁜 �
 
 ## Issue shape & categories
 `makeIssue({ category, severity, file, message, fix?, evidence? })`
-- category: `cjk-line-break` `orphan-widow` `measure` `line-height` `type-scale` `letter-spacing` `punctuation-hygiene` `cjk-break-css` `spelling`
+- category: `cjk-line-break` `orphan-widow` `measure` `line-height` `type-scale` `letter-spacing` `value-contrast` `font-pairing` `paragraph-rhythm` `layout-image` `punctuation-hygiene` `cjk-break-css` `spelling`
 - fix.kind: `text-replace`(range) | `insert-nbsp`(at) | `insert-wbr`(at) | `css-rule`(cssTarget)
 - before/after는 diff·멱등성 확인용. 자세한 형태는 README / 플랜 참조.
 
