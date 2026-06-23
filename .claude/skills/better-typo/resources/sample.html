@@ -1,0 +1,37 @@
+<!doctype html>
+<!--
+  better-typo 검증 픽스처. 의도적으로 나쁘게 작성됨:
+  - word-break 미설정(한글 어절 중간 끊김 유발)
+  - max-width 없음 / 좁음 → measure 위반
+  - line-height: 1.2 → 본문 행간 너무 좁음
+  - "2026 년" 숫자+단위 분리
+  - 이중  공백, 부호 앞 공백 , 말줄임표...
+  - 미래 날짜 오타 의심 (2026-06-18)
+  before/after 측정으로 줄내림 개선을 확인한다.
+-->
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>better-typo sample</title>
+  <style>
+    body { font-family: system-ui, sans-serif; }
+    .post { width: 720px; padding: 24px; }
+    .post h1 { font-size: 40px; line-height: 1.2; }
+    .post h2 { font-size: 30px; }
+    .post p { font-size: 18px; line-height: 1.2; }
+    /* 일부러: word-break / overflow-wrap / max-width 누락 */
+  </style>
+</head>
+<body>
+  <article class="post">
+    <h1>단순 구현에서 블로그 문화 루프를 보기까지</h1>
+    <h2>ceal-terview · AX 공유회 블로그 프로세스 회고</h2>
+
+    <p>이 글은 2026 년에 진행한 공유회의 블로그 프로세스를  회고하는 글입니다. 단순한 기능 구현에서 시작했지만 결국에는 팀의 글쓰기 문화 전체를 다시 보게 되었고, 그 과정에서 배운 것들을 정리해 보려고 합니다 . 특히 줄바꿈 같은 사소해 보이는 부분이 문서의 인상을 얼마나 바꾸는지 직접 확인할 수 있었습니다...</p>
+
+    <blockquote>좋은 문서는 내용만으로 완성되지 않는다. 읽는 사람의 눈이 편하게 흐르도록 다듬는 마지막 한 끗이 퀄리티를 만든다.</blockquote>
+
+    <p>작성일: 2026-06-18 · 우리는 Claude Code 를 활용해 이 과정을 자동화했고, 약 50 % 의 반복 작업을 줄일 수 있었습니다.</p>
+  </article>
+</body>
+</html>
