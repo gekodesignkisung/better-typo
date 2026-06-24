@@ -64,7 +64,7 @@
 
     /* 전역 토글 */
     .paper.fix-keepall .blk { word-break: keep-all; overflow-wrap: break-word; }
-    .paper.fix-measure .post { max-width: 40em; }   /* 한글 글자폭≈1em → 약 38자 (§3) */
+    .paper.fix-measure .post { max-width: 44em; }   /* 한글 글자폭≈1em → 약 42자 (§3) */
     .paper.fix-leading .blk[data-role="body"], .paper.fix-leading .blk[data-role="caption"] { line-height: 1.78; }
     .paper.fix-leading .blk[data-role="quote"] { line-height: 1.7; }
     .paper.fix-rhythm .blk[data-role="body"] { margin-bottom: 1.35em; }   /* 단락 세로 리듬 (§10) */
@@ -449,7 +449,7 @@
         apply:() => { selectEl(bodyEl(), '줄내림'); paper.classList.add('fix-keepall'); } });
       steps.push({ phase:'가독성', tag:'measure', title:'글줄 길이(measure)',
         reason:'한글 본문은 한 줄 25–40자가 이상적입니다. CSS의 ch는 숫자 0 폭 기준이라 한글에선 절반쯤으로 좁아져, 한글 글자폭(≈1em)에 맞춰 약 38자 폭으로 잡습니다.',
-        before:'폭 제한 없음', after:'max-width 40em (≈38자)', ref:'theory §3',
+        before:'폭 제한 없음', after:'max-width 44em (≈42자)', ref:'theory §3',
         apply:() => { selectEl(document.getElementById('post'), '글줄 길이'); paper.classList.add('fix-measure'); } });
       steps.push({ phase:'가독성', tag:'line-height', title:'행간(line-height)',
         reason:'본문 행간 1.3은 한글에 좁습니다. 권장 1.6–1.8에 맞춰 1.78로 넓혀 눈이 편하게 흐르도록 합니다.',
@@ -593,6 +593,9 @@
       document.getElementById('nowPhase').textContent = '완료';
       document.getElementById('nowCount').textContent = `${STEPS.length} / ${STEPS.length}`;
       stepMeta.textContent = `완료 · ${STEPS.length}개 항목 적용`;
+      // 완료되면 결과 전체를 처음부터 보도록 캔버스를 맨 위로 정렬
+      const wrap = document.querySelector('.canvasWrap');
+      if (wrap) wrap.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function improve(){
