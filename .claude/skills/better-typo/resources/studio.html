@@ -39,7 +39,7 @@
     .body { flex: 1; display: grid; grid-template-columns: 1fr 312px; min-height: 0; }
 
     /* 좌: 전체 흰 캔버스 */
-    .canvasWrap { background: #fff; overflow: auto; display: flex; justify-content: center; padding: 52px 48px; }
+    .canvasWrap { position: relative; background: #fff; overflow: auto; display: flex; justify-content: center; padding: 52px 48px; }
     .paper {
       --font-body: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
       --font-head: "Nanum Myeongjo", "Batang", 바탕, Georgia, "Times New Roman", serif;
@@ -49,6 +49,21 @@
       padding: 8px 4px 80px;
     }
     .paper[contenteditable="true"] { outline: none; }
+    /* 빈 캔버스 placeholder — 입력이 비었을 때만 안내 예시를 연하게 */
+    .paper.is-empty::before {
+      content: attr(data-placeholder); white-space: pre-wrap;
+      color: #b6bcc7; font-size: clamp(14px, 2vw, 15px); line-height: 1.7; pointer-events: none;
+      display: block;
+    }
+    .sample-link {
+      position: absolute; top: 18px; right: 22px; z-index: 4;
+      background: #fff; color: var(--muted); border: 1px solid var(--line);
+      border-radius: 7px; padding: 6px 12px; font-size: 12px; cursor: pointer;
+      transition: color .2s, border-color .2s, opacity .2s; display: none;
+    }
+    .sample-link:hover { color: var(--accent); border-color: var(--accent); }
+    /* 예시 버튼은 빈 캔버스일 때만 노출 */
+    .canvasWrap:has(.paper.is-empty) .sample-link { display: block; }
     .post { transition: max-width .8s cubic-bezier(.22,1,.36,1); }
 
     /* 블록 기본(before): 위계 없음 — 모두 같은 크기·웨이트·균일 회색, 어절 중간 끊김 */
@@ -69,15 +84,17 @@
     .paper.fix-leading .blk[data-role="quote"] { line-height: 1.7; }
     .paper.fix-rhythm .blk[data-role="body"] { margin-bottom: 1.35em; }   /* 단락 세로 리듬 (§10) */
 
-    /* 위계: 크기(§5) + 웨이트 + 명도(§9) + 폰트 페어링(§9) */
-    .blk.on[data-role="title"]    { font-family: var(--font-head); font-size: 40px; line-height: 1.14; letter-spacing: -0.02em; font-weight: 700; color: var(--ink-title); margin-bottom: 6px; }
-    .blk.on[data-role="subtitle"] { font-size: 19px; line-height: 1.45; letter-spacing: -0.003em; font-weight: 600; color: var(--ink-sub); margin-bottom: 30px; }
-    .blk.on[data-role="body"]     { font-size: 17px; font-weight: 400; color: var(--ink-body); margin-bottom: 18px; }
+    /* 위계: 크기(§5) + 웨이트 + 명도(§9) + 폰트 페어링(§9)
+       크기는 clamp()로 유체(fluid) 스케일 — 폭이 줄면 폰트도 부드럽게 작아진다.
+       clamp(최소, 선호[뷰포트 연동], 최대): 데스크탑에선 최대, 모바일에선 최소로 수렴. */
+    .blk.on[data-role="title"]    { font-family: var(--font-head); font-size: clamp(28px, 5.2vw, 40px); line-height: 1.14; letter-spacing: -0.02em; font-weight: 700; color: var(--ink-title); margin-bottom: 6px; }
+    .blk.on[data-role="subtitle"] { font-size: clamp(16px, 2.4vw, 19px); line-height: 1.45; letter-spacing: -0.003em; font-weight: 600; color: var(--ink-sub); margin-bottom: clamp(20px, 4vw, 30px); }
+    .blk.on[data-role="body"]     { font-size: clamp(15px, 2.1vw, 17px); font-weight: 400; color: var(--ink-body); margin-bottom: 18px; }
     /* 목록: 본문보다 좁은 행간 + 항목 간격 축소 + 행잉 인덴트로 한 덩어리 */
-    .blk.on[data-role="list"]     { font-size: 17px; line-height: 1.5; font-weight: 400; color: var(--ink-body); margin: 4px 0; padding-left: 1.3em; text-indent: -1.3em; }
+    .blk.on[data-role="list"]     { font-size: clamp(15px, 2.1vw, 17px); line-height: 1.5; font-weight: 400; color: var(--ink-body); margin: 4px 0; padding-left: 1.3em; text-indent: -1.3em; }
     .blk.on[data-role="list"] + .blk.on[data-role="list"] { margin-top: 2px; }
-    .blk.on[data-role="quote"]    { font-family: var(--font-head); font-size: 19px; font-style: italic; font-weight: 400; color: var(--ink-quote); border-left: 3px solid #cbd3dd; padding-left: 22px; margin: 28px 0; }
-    .blk.on[data-role="caption"]  { font-size: 13px; font-weight: 500; color: var(--ink-cap); letter-spacing: 0.01em; margin-top: 24px; }
+    .blk.on[data-role="quote"]    { font-family: var(--font-head); font-size: clamp(16px, 2.4vw, 19px); font-style: italic; font-weight: 400; color: var(--ink-quote); border-left: 3px solid #cbd3dd; padding-left: clamp(16px, 3vw, 22px); margin: 28px 0; }
+    .blk.on[data-role="caption"]  { font-size: clamp(12px, 1.7vw, 13px); font-weight: 500; color: var(--ink-cap); letter-spacing: 0.01em; margin-top: 24px; }
 
     /* 이미지 영역 제안 (레이아웃) */
     .imgph {
@@ -94,17 +111,33 @@
     .flash { animation: flash 1.1s ease; }
     @keyframes flash { 0%{ background:#fff3bf } 100%{ background:transparent } }
 
-    /* 선택 표시 (미니멀) */
+    /* 선택 표시 (미니멀) — 라운드 없이 직각, 제목은 선 위에 딱 붙여.
+       색은 단계(phase)별로 --sel 변수로 바뀐다(테두리·배지·그림자 동시). */
     .selbox {
-      position: absolute; border: 1.5px solid var(--accent); border-radius: 4px;
-      box-shadow: 0 0 0 3px rgba(47,107,220,.10); pointer-events: none;
-      opacity: 0; transition: all .42s cubic-bezier(.4,0,.2,1), opacity .25s; z-index: 5;
+      --sel: var(--accent);
+      position: absolute; border: 1.5px solid var(--sel); border-radius: 0;
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--sel) 12%, transparent); pointer-events: none;
+      opacity: 0; transition: all .42s cubic-bezier(.4,0,.2,1), opacity .25s, border-color .4s ease; z-index: 5;
     }
     .selbox.show { opacity: 1; }
+    /* 제목 배지: selbox 윗선에 맞닿게(아래로 -100%) + 좌측 모서리를 선과 정렬. 라운드 없음. */
     .selbox .badge {
-      position: absolute; top: -23px; left: -1px; background: var(--accent); color: #fff;
-      font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 5px; white-space: nowrap;
+      position: absolute; bottom: 100%; left: -1.5px; background: var(--sel); color: #fff;
+      font-size: 11px; font-weight: 600; line-height: 1.45; padding: 4px 10px;
+      border-radius: 0; white-space: nowrap;
+      transform-origin: left bottom;
+      transition: background .4s ease, transform .35s cubic-bezier(.22,1,.36,1), opacity .3s ease;
     }
+    /* 배지 등장: 아래서 살짝 올라오며 나타남(살아 있는 느낌) */
+    .selbox .badge { opacity: 0; transform: translateY(4px) scale(.96); }
+    .selbox.show .badge { opacity: 1; transform: none; }
+    /* 단계별 색 — 진행 흐름이 색으로 구분된다 */
+    .selbox.ph-structure { --sel: #2f6bdc; }  /* 구조 분석 — 블루 */
+    .selbox.ph-hierarchy { --sel: #8b46d6; }  /* 위계 — 퍼플 */
+    .selbox.ph-read      { --sel: #1f9d5b; }  /* 가독성 — 그린 */
+    .selbox.ph-layout    { --sel: #d98a1f; }  /* 레이아웃 — 앰버 */
+    .selbox.ph-spell     { --sel: #d6456b; }  /* 맞춤법·오타 — 핑크 */
+    .selbox.ph-tidy      { --sel: #3a8fb0; }  /* 정리 — 틸 */
 
     /* 우: 인스펙터 (데코 최소) */
     .inspector {
@@ -158,6 +191,12 @@
     .reasonbox .reason { font-size: 13px; line-height: 1.65; color: #5b616c; }
     .reasonbox .ba { margin-top: 11px; font-size: 11.5px; font-family: ui-monospace, "SFMono-Regular", monospace; display: flex; flex-direction: column; gap: 3px; word-break: break-all; }
     .reasonbox .ba .b { color: #c0392b; } .reasonbox .ba .a { color: var(--good); }
+    /* 실제 수정 항목 목록: 한 항목(− 전 / ＋ 후 / 라벨)을 한 묶음으로, 항목 사이 옅은 구분선 */
+    .reasonbox .ba .ba-row { display: flex; flex-direction: column; gap: 2px; padding: 5px 0; border-top: 1px solid #eef0f3; }
+    .reasonbox .ba .ba-row:first-child { border-top: none; padding-top: 2px; }
+    .reasonbox .ba .ba-label { color: var(--muted); font-family: var(--font-body, sans-serif); font-size: 10.5px; }
+    /* 항목이 많을 때 카드가 길어지지 않도록 스크롤 */
+    .reasonbox .ba { max-height: 168px; overflow-y: auto; }
     .reasonbox .ref { margin-top: 9px; font-size: 11px; color: var(--muted); }
 
     /* 진행바 — nowbox 하단 */
@@ -175,22 +214,75 @@
     }
     .pg-items li.active::before { left: -5px; box-shadow: 0 0 0 3px rgba(47,107,220,.15); }
     .pg-items li.done::before { background: var(--good); }
+
+    /* ───────────────────────────────────────────────
+       모바일 (≤720px) — 좌우 2단 대신 세로 스택:
+       위에 글 캔버스(전체폭), 아래에 인스펙터가 하단 시트로.
+       데스크탑은 위 규칙 그대로 유지.
+       ─────────────────────────────────────────────── */
+    @media (max-width: 720px) {
+      /* 고정 높이/overflow 해제 → 페이지 전체가 자연 스크롤 */
+      body { height: auto; min-height: 100%; overflow: visible; }
+
+      .topbar { padding: 11px 16px; gap: 10px; position: sticky; top: 0; z-index: 20; }
+      .tagline { display: none; }                 /* 좁은 폭에선 군더더기 제거 */
+      .btn { padding: 8px 14px; font-size: 12.5px; }
+
+      /* 본체: 2단 그리드 → 1단 세로 스택 */
+      .body { display: block; }
+
+      /* 캔버스: 전체 폭, 패딩 축소, max-width 해제로 뷰포트 폭에 맞춰 줄내림 */
+      .canvasWrap { padding: 22px 16px 120px; overflow: visible; }
+      .paper { max-width: none; }
+      .paper.fix-measure .post { max-width: none; }  /* 모바일은 뷰포트 폭이 곧 measure */
+      /* 예시 버튼: 우상단 절대배치는 placeholder 첫 줄과 겹친다 → 캔버스 위 전체폭 흐름으로 */
+      .canvasWrap:has(.paper.is-empty) { padding-top: 56px; }
+      .sample-link { top: 16px; left: 16px; right: auto; }
+
+      /* 인스펙터: 하단 고정 시트. 기본은 '현재 단계' 카드만 보이고,
+         진행 단계 목록은 시트 안에서 스크롤된다. */
+      .inspector {
+        position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+        border-left: none; border-top: 1px solid var(--line);
+        max-height: 46vh; padding: 0 16px 14px;
+        border-radius: 14px 14px 0 0;
+        box-shadow: 0 -8px 24px rgba(20,30,60,.10);
+        gap: 12px;
+      }
+      /* 시트 손잡이 */
+      .inspector::before {
+        content: ''; display: block; width: 38px; height: 4px; border-radius: 999px;
+        background: #d6dae1; margin: 8px auto 2px; flex: 0 0 auto;
+      }
+      .nowbox { position: static; margin: 0; padding: 4px 0 12px; background: none; }
+      .nowbox.run { background: none; }
+      .insp-h { display: none; }                  /* '진행 단계' 라벨은 공간 절약 위해 숨김 */
+      .progress-list { gap: 9px; }
+      .foot { display: none; }                     /* 하단 메타는 nowCount와 중복 → 숨김 */
+    }
+
+    /* 아주 좁은 폭(≤380px) 추가 미세조정 */
+    @media (max-width: 380px) {
+      .brand { font-size: 14px; }
+      .canvasWrap { padding: 18px 13px 120px; }
+    }
   </style>
 </head>
 <body>
   <div class="topbar">
     <div class="brandbox">
       <div class="brand">Better-Typo</div>
-      <div class="tagline">보기도, 읽기도 좋은 글로 다듬어주는 스킬</div>
+      <div class="tagline">보기 좋고, 읽기 좋은 글로 다듬어주는 스킬</div>
     </div>
     <div class="grow"></div>
     <button class="btn" id="btnGo">Make it Better
   </div>
 
   <div class="body">
-    <!-- 좌: 흰 캔버스 -->
+    <!-- 좌: 흰 캔버스 (빈 상태 — 사용자가 자기 글을 붙여넣는다) -->
     <div class="canvasWrap">
-      <div class="paper" id="paper" contenteditable="true" spellcheck="false"><div>단순 구현에서 블로그 문화 루프를 보기까지</div><div>ceal-terview · AX 공유회 블로그 프로세스 회고</div><div>2026-04-22하동훈(Software Engineer)</div><div>이 글은 2026 년에 진행한 공유회의 블로그 프로세스를  회고하는 글입니다. 단순한 기능 구현에서 시작했지만 결국에는 팀의 글쓰기 문화 전체를 다시 보게 되었고, 그 과정에서 배운 것들을 정리해 보려고 합니다 .</div><div>처음에는 단순한 구현 작업이라고 생각했지만, 여러 사람과 대화하고 회의를 거치면서 이 일이 글쓰기 문화 전체를 바꾸는 일이라는 걸 직접 확인할수있었습니다...</div><div>발행 프로세스는 다음 세 단계로 정리된다:</div><div>1.: 글감을 발굴한다</div><div>2.: 초안을 작성하고 리뷰한다</div><div>3.: 반응을 보고 다시 조직에 공유한다</div><div>&gt; 좋은 문서는 내용만으로 완성되지 않는다. 읽는 사람의 눈이 편하게 흐르도록 다듬는 마지막 한 끗이 퀄리티를 만든다.</div><div>작성일: 2026-06-18 · 우리는 Claude Code를 활용해 약 50 % 의 반복 작업을 줄였습니다.</div></div>
+      <div class="paper" id="paper" contenteditable="true" spellcheck="false" data-placeholder="여기에 다듬고 싶은 글을 붙여넣으세요.&#10;&#10;예) 이 글은 2026 년에 진행한 공유회의 회고입니다. 단순한 기능 구현에서 시작했지만 결국에는 글쓰기 문화 전체를 다시 보게 되었습니다...&#10;&#10;줄바꿈으로 제목·소제목·본문·목록·인용·캡션을 구분하면 더 정확히 분석합니다."></div>
+      <button class="sample-link" id="loadSample" type="button">예시 글 불러오기</button>
     </div>
 
     <!-- 우: 인스펙터 -->
@@ -221,8 +313,10 @@
   </div>
 
   <script>
-    // ════ 검출 규칙 (theory.md 재현) ════
-    const UNIT = '년|개월|월|일|시간|시|분|초|원|달러|개|명|회|차|점|위|배|％|%|kg|km|cm|mm|m|g|gb|mb|kb';
+    // ════ 검출 규칙 (theory.md 재현 — 단일 기준) ════
+    // 단위 집합은 theory §1 / scripts/lib/unit-rules.mjs 의 NUMBER_UNITS 와 동일.
+    // 긴 단위(개월·시간·페이지)를 짧은 단위(개·시) 앞에 둬 부분 매칭 오탐 방지.
+    const UNIT = '개월|시간|페이지|년|월|일|시|분|초|개|명|번|차|회|점|위|배|쪽|원|달러|%|px|em|rem|pt|kg|g|mm|cm|km|m|ml|L|주';
     const ROLE_LABEL = { title:'제목', subtitle:'소제목', body:'본문', list:'목록', quote:'인용', caption:'캡션' };
     const ROLE_ORDER = ['title','subtitle','body','list','quote','caption'];
     const STEMS = '할|볼|줄|들|올|갈|날|살|말|될|쓸|길|물|풀|틀|벌';
@@ -248,21 +342,25 @@
       const add = (re, type) => { let m; re.lastIndex = 0;
         while ((m = re.exec(text))) { ms.push({ start:m.index, end:m.index+m[0].length, type, raw:m[0], g:m });
           if (m.index === re.lastIndex) re.lastIndex++; } };
-      // 맞춤법·오타 (§8)
+      // 맞춤법·오타 (theory §8) — 의존명사 '수' 띄어쓰기 + 오타 사전(단일 기준)
       add(new RegExp('('+STEMS+')수(있|없)', 'g'), 'spellSpace');
       Object.keys(TYPO).forEach(k => add(new RegExp(k, 'g'), 'spellWord'));
-      // 띄어쓰기: 날짜+글자 / 글자·숫자+여는괄호 / 닫는괄호+글자
+      // 띄어쓰기 (theory §8): 날짜+글자 / 글자·숫자+여는괄호 / 닫는괄호+글자
       add(/(\d{4}-\d{1,2}-\d{1,2})([가-힣A-Za-z(])/g, 'spaceJoin');
       add(/([가-힣A-Za-z0-9])(\()/g, 'spaceJoin');
       add(/(\))([가-힣A-Za-z])/g, 'spaceJoin');
-      // 문장부호/공백 (§7)
+      // 문장부호/공백 (theory §7)
+      // 영문 문장 첫 글자 대문자 (theory §7): 줄 맨 앞 첫 글자(소문자 영문)만 잡는다.
+      // 안전 조건 — 첫 단어가 4자 이상 모두 소문자(약어·식별자 npm/iOS, 캐멀케이스 iPhone 제외)이고
+      // 뒤에 공백+단어가 이어지는 일반 문장. 짧은 첫 단어나 식별자 의심은 §8(LLM)으로.
+      add(/^[a-z](?=[a-z]{3,} [A-Za-z가-힣])/g, 'capitalize');
       add(/\.{3,}/g, 'ellipsis');
       add(/(\d+)\.\s?:/g, 'numMarker');   // 어색한 번호 마커 1.: → 1.
       add(/"([^"\n]{1,100})"/g, 'quote');
       add(/ +([.,!?;:。，、])/g, 'spacePunct');
       add(/(?<=[가-힣A-Za-z])([.,!?])(?=[가-힣A-Za-z])/g, 'spaceAfterPunct');  // 다.특히 → 다. 특히
       add(/ {2,}/g, 'doubleSpace');
-      // 글루 (§1)
+      // 숫자+단위 글루 (theory §1)
       add(new RegExp('(\\d[\\d,]*)\\s('+UNIT+')(?![A-Za-z가-힣])', 'g'), 'numUnit');
       ms.sort((a,b) => a.start-b.start || b.end-a.end);
       const kept = []; let last = -1;
@@ -305,6 +403,10 @@
         const p = m.raw;
         beforeHTML = esc(p); fixedHTML = esc(p)+' ';
         before = p+'붙음'; after = p+'␣'; category='hygiene'; label='부호 뒤 띄어쓰기'; ref='§7';
+      } else if (t === 'capitalize') {
+        const up = m.raw.toUpperCase();
+        beforeHTML = esc(m.raw); fixedHTML = esc(up);
+        before = m.raw+'…'; after = up+'…'; category='hygiene'; label='영문 첫 글자 대문자'; ref='§7';
       } else { // spellWord
         const fixed = TYPO[m.raw];
         beforeHTML = esc(m.raw); fixedHTML = esc(fixed); before = m.raw; after = fixed;
@@ -332,18 +434,41 @@
       paper.appendChild(selbox);
       return selbox;
     }
-    function selectEl(el, label){
-      if (!el) return;
-      // 적용 대상이 화면 밖이면 캔버스를 스크롤해 가운데로 가져온다.
-      scrollIntoViewIfNeeded(el);
+    let selboxTrackRAF = null;
+    function selectEl(els, label){
+      // 단일 요소·배열·NodeList 모두 허용 → 여러 블록이면 전체를 감싸는 영역으로.
+      const list = (els == null) ? [] : (els.length !== undefined && typeof els !== 'string' ? [...els] : [els]);
+      const targets = list.filter(Boolean);
+      if (!targets.length) return;
+      scrollIntoViewIfNeeded(targets[0]);
       const box = ensureSelbox();
-      const pr = paper.getBoundingClientRect(), br = el.getBoundingClientRect();
-      box.style.top = (br.top - pr.top + paper.scrollTop - 4) + 'px';
-      box.style.left = (br.left - pr.left - 5) + 'px';
-      box.style.width = (br.width + 10) + 'px';
-      box.style.height = (br.height + 8) + 'px';
       box.querySelector('.badge').textContent = label || '';
       box.classList.add('show');
+
+      // 적용(위계 폰트 변경 등)에 트랜지션이 걸려 높이가 변하는 동안
+      // selbox가 "적용되는 영역"을 계속 따라가도록 rAF로 추적한다.
+      if (selboxTrackRAF) cancelAnimationFrame(selboxTrackRAF);
+      const start = performance.now();
+      const place = (now) => {
+        const pr = paper.getBoundingClientRect();
+        // 모든 타깃의 합집합 bounding box 계산
+        let top = Infinity, left = Infinity, right = -Infinity, bottom = -Infinity;
+        for (const el of targets) {
+          const r = el.getBoundingClientRect();
+          top = Math.min(top, r.top); left = Math.min(left, r.left);
+          right = Math.max(right, r.right); bottom = Math.max(bottom, r.bottom);
+        }
+        box.style.top = (top - pr.top + paper.scrollTop - 4) + 'px';
+        box.style.left = (left - pr.left - 5) + 'px';
+        box.style.width = (right - left + 10) + 'px';
+        box.style.height = (bottom - top + 8) + 'px';
+        // 트랜지션(0.85s) 길이만큼 추적 후 정지
+        if (now - start < 950) selboxTrackRAF = requestAnimationFrame(place);
+        else selboxTrackRAF = null;
+      };
+      // 첫 배치는 즉시(현재 크기), 이후 rAF로 변화 추적
+      place(start);
+      selboxTrackRAF = requestAnimationFrame(place);
     }
     // 좌측 캔버스(.canvasWrap)에서 대상 요소가 뷰포트 밖이면 부드럽게 스크롤.
     function scrollIntoViewIfNeeded(el){
@@ -357,6 +482,48 @@
       }
     }
     function hideSel(){ if (selbox) selbox.classList.remove('show'); }
+
+    // 고아 교정 (theory §2) — 본문 단락의 마지막 시각적 줄이 ≤4자면
+    // 직전 어절 사이 공백을 nbsp로 바꿔 한 단어를 함께 끌어내린다. 해소한 단락 수 반환.
+    function lastLineCharCount(el){
+      // el 안의 모든 텍스트노드를 순서대로 모아(글루로 생긴 fixspan 등 자식이 섞여도)
+      // 글자별 top을 측정, 마지막 시각적 줄의 글자 수를 센다.
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      const nodes = [];
+      for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+        if (n.textContent.length) nodes.push(n);
+      }
+      if (!nodes.length) return null;
+      const range = document.createRange();
+      let lastTop = null, lastLineChars = 0, total = 0;
+      for (const node of nodes) {
+        const text = node.textContent;
+        for (let i = 1; i <= text.length; i++) {
+          range.setStart(node, i - 1); range.setEnd(node, i);
+          const rect = range.getClientRects()[0];
+          if (!rect) continue;
+          if (lastTop !== null && rect.top - lastTop > 1) lastLineChars = 0; // 새 줄 시작
+          lastTop = rect.top;
+          if (!/\s/.test(text[i - 1])) lastLineChars++; // 줄 끝 공백은 안 셈
+          total++;
+        }
+      }
+      return total ? lastLineChars : null;
+    }
+    function fixOrphans(){
+      let fixed = 0;
+      paper.querySelectorAll('.blk[data-role="body"]').forEach(el => {
+        const n = lastLineCharCount(el);
+        if (n === null || n === 0 || n > 4) return;       // 고아 아님
+        // 마지막 공백을 nbsp로: 직전 어절을 함께 내려보낸다.
+        const html = el.innerHTML;
+        const lastSpace = html.lastIndexOf(' ');
+        if (lastSpace === -1) return;
+        el.innerHTML = html.slice(0, lastSpace) + ' ' + html.slice(lastSpace + 1);
+        flash(el); fixed++;
+      });
+      return fixed;
+    }
 
     // 입력 → 논리적 줄 (소프트 줄바꿈 무시)
     function getLines(){
@@ -372,13 +539,14 @@
     // ════ 단계 메타 ════
     const PHASE_ORDER = ['구조 분석','위계','가독성','레이아웃','맞춤법·오타','정리'];
     const PHASE_META = {
-      '구조 분석':  { n:1, desc:'제목·소제목·본문·인용·캡션' },
-      '위계':       { n:2, desc:'크기·웨이트·명도·폰트' },
-      '가독성':     { n:3, desc:'줄내림·measure·행간·리듬' },
-      '레이아웃':   { n:4, desc:'이미지 영역 제안' },
-      '맞춤법·오타': { n:5, desc:'띄어쓰기·맞춤법' },
-      '정리':       { n:6, desc:'문장부호·따옴표·글루' },
+      '구조 분석':  { n:1, desc:'제목·소제목·본문·인용·캡션', cls:'ph-structure' },
+      '위계':       { n:2, desc:'크기·웨이트·명도·폰트',       cls:'ph-hierarchy' },
+      '가독성':     { n:3, desc:'줄내림·measure·행간·리듬',    cls:'ph-read' },
+      '레이아웃':   { n:4, desc:'이미지 영역 제안',            cls:'ph-layout' },
+      '맞춤법·오타': { n:5, desc:'띄어쓰기·맞춤법',             cls:'ph-spell' },
+      '정리':       { n:6, desc:'문장부호·따옴표·글루',        cls:'ph-tidy' },
     };
+    const PHASE_CLASSES = Object.values(PHASE_META).map(m => m.cls);
 
     // ════ 빌드: 입력 → 블록 + 단계 ════
     function buildModel(){
@@ -421,12 +589,12 @@
       // ② 위계 — 존재 역할 순서대로
       const present = ROLE_ORDER.filter(r => blocks.some(b => b.role === r));
       const scaleNote = {
-        title:    { reason:'제목은 모듈러 스케일 최상단으로 키우고, 본문 산세리프와 대비되는 세리프(명조)로 질감을 바꿉니다. 큰 글자의 벌어짐은 자간 -0.02em로 조이고, 가장 진한 명도로 시선을 먼저 잡습니다.', after:'세리프 40px · 700 · 자간 -0.02em · 최진 명도', ref:'theory §5·§6·§9' },
-        subtitle: { reason:'소제목은 제목과 본문 사이 단계. 세미볼드(600)와 한 단계 옅은 명도로 보조 정보임을 드러냅니다.', after:'19px · 600 · 보조 명도', ref:'theory §5·§9' },
-        body:     { reason:'본문은 가독 기준 크기(17px)·기본 웨이트. 명도는 순흑이 아닌 진회색(#2b2f37)으로 눈부심을 줄입니다.', after:'17px · 400 · 본문 명도', ref:'theory §5·§9' },
-        list:     { reason:'번호·기호 목록은 본문과 다른 덩어리입니다. 행간을 본문보다 좁히고(1.5) 항목 간격을 줄여 한 묶음으로 보이게 하며, 마커를 왼쪽으로 내어 정렬(행잉 인덴트)합니다.', after:'행간 1.5 · 항목 간격 축소 · 행잉 인덴트', ref:'theory §5·§10' },
-        quote:    { reason:'인용은 본문과 분리되도록 세리프 이탤릭·좌측 라인·들여쓰기. 색온도를 살짝 달리해 결을 구분합니다.', after:'세리프 이탤릭 · 좌측 라인', ref:'theory §5·§9' },
-        caption:  { reason:'캡션·메타는 최소 크기·가장 옅은 명도·약한 자간으로 본문 흐름을 방해하지 않게 둡니다.', after:'13px · 500 · 최옅 명도', ref:'theory §5·§6' },
+        title:    { reason:'제목은 모듈러 스케일 최상단으로 크기를 키우고(40px), 본문 산세리프와 대비되는 세리프(명조)로 질감을 바꿉니다. 큰 글자는 자간이 벌어 보이므로 -0.02em로 조이고(§6), 가장 진한 명도(#14161b)로 시선을 먼저 잡습니다.', after:'크기 40px · 웨이트 700 · 자간 -0.02em · 최진 명도', ref:'theory §5·§6·§9' },
+        subtitle: { reason:'소제목은 제목과 본문 사이 단계. 크기(19px)·세미볼드(600)와 한 단계 옅은 명도(#5f6675)로 보조 정보임을 드러냅니다.', after:'크기 19px · 웨이트 600 · 보조 명도', ref:'theory §5·§9' },
+        body:     { reason:'본문은 가독 기준 크기(17px)·기본 웨이트(400). 명도는 순흑(#000) 대신 진회색(#2b2f37)으로 눈부심·피로를 줄입니다.', after:'크기 17px · 웨이트 400 · 본문 명도(진회색)', ref:'theory §5·§9' },
+        list:     { reason:'번호·기호 목록은 본문과 다른 덩어리입니다. 행간을 본문보다 좁히고(1.5) 항목 간격을 줄여 한 묶음으로 보이게 하며, 마커를 왼쪽으로 내어 둘째 줄이 글머리에 맞도록 행잉 인덴트(들여쓰기)로 정렬합니다.', after:'행간 1.5 · 항목 간격 축소 · 행잉 인덴트', ref:'theory §5·§10' },
+        quote:    { reason:'인용은 본문과 분리되도록 세리프 이탤릭·좌측 라인·들여쓰기. 명도(#3f5d78)를 살짝 달리해 결을 구분합니다.', after:'세리프 이탤릭 · 좌측 라인 · 들여쓰기', ref:'theory §5·§9' },
+        caption:  { reason:'캡션·메타는 최소 크기(13px)·가장 옅은 명도(#9aa1ad)·약한 양수 자간(+0.01em)으로 본문 흐름을 방해하지 않게 둡니다.', after:'크기 13px · 최옅 명도 · 자간 +0.01em', ref:'theory §5·§6·§9' },
       };
       present.forEach(r => {
         const note = scaleNote[r];
@@ -434,9 +602,9 @@
           phase:'위계', tag:'type-scale', title:`${ROLE_LABEL[r]} 위계 적용`,
           reason:note.reason, before:'15px · 회색 · 위계 없음', after:note.after, ref:note.ref,
           apply:() => {
-            let first = null;
-            blocks.forEach((b, bi) => { if (b.role === r) { const el = document.getElementById('blk'+bi); el.classList.add('on'); if (!first) first = el; } });
-            if (first) selectEl(first, ROLE_LABEL[r]);
+            const targets = [];
+            blocks.forEach((b, bi) => { if (b.role === r) { const el = document.getElementById('blk'+bi); el.classList.add('on'); targets.push(el); } });
+            if (targets.length) selectEl(targets, ROLE_LABEL[r]);   // 같은 역할 전체를 감싼다
           }
         });
       });
@@ -447,6 +615,15 @@
         reason:'한글은 어절(공백) 단위로만 줄을 끊어야 깔끔합니다. word-break: keep-all 로 어절 중간·조사 앞 끊김을 막습니다.',
         before:'word-break: normal', after:'word-break: keep-all', ref:'theory §1',
         apply:() => { selectEl(bodyEl(), '줄내림'); paper.classList.add('fix-keepall'); } });
+      // 의미 단위 glue (§1) — 끊기면 안 되는 어절 쌍(숫자+단위, 고정 복합어)을 nbsp로 묶는다.
+      // detect()가 만든 numUnit fix가 곧 glue 대상이다.
+      const glue = ctx.fixes.filter(f => f.type === 'numUnit');
+      if (glue.length) {
+        steps.push({ phase:'가독성', tag:'cjk-glue', title:'의미 단위 묶기 (nbsp glue)',
+          reason:'keep-all로도 막지 못하는 "끊기면 안 되는 곳"이 있습니다. 숫자+단위(2026 년·50 %)나 고정 복합어처럼 한 덩어리로 읽혀야 하는 어절 쌍은 줄 끝에서 갈라지지 않도록 사이 공백을 nbsp로 묶습니다.',
+          before:'2026 / 년 (줄 끝에서 분리 가능)', after:`숫자+단위 등 ${glue.length}곳 nbsp로 묶음`, ref:'theory §1',
+          apply:() => { selectEl(bodyEl(), `글루 ${glue.length}곳`); glue.forEach((f,k) => setTimeout(f.apply, k*120)); } });
+      }
       steps.push({ phase:'가독성', tag:'measure', title:'글줄 길이(measure)',
         reason:'한글 본문은 한 줄 25–40자가 이상적입니다. CSS의 ch는 숫자 0 폭 기준이라 한글에선 절반쯤으로 좁아져, 한글 글자폭(≈1em)에 맞춰 약 38자 폭으로 잡습니다.',
         before:'폭 제한 없음', after:'max-width 44em (≈42자)', ref:'theory §3',
@@ -459,6 +636,15 @@
         reason:'단락 사이 여백을 글자 크기에 비례해 키워 세로 운율을 만듭니다. 문단 덩어리가 분명해져 스캔이 쉬워집니다.',
         before:'문단 간격 좁음', after:'단락 간격 1.35em', ref:'theory §10',
         apply:() => { selectEl(bodyEl(), '리듬'); paper.classList.add('fix-rhythm'); } });
+      // 고아(orphan) 교정 (§2) — measure·keep-all 적용 후의 실제 줄바꿈을 측정해,
+      // 본문 마지막 줄에 짧은 단어 하나만 남으면(≤4자) 직전 공백을 nbsp로 묶어 동반어를 끌어내린다.
+      steps.push({ phase:'가독성', tag:'orphan', title:'고아 단어 교정',
+        reason:'단락 마지막 줄에 짧은 단어 하나만 떨어지면(고아) 단락 끝이 허전합니다. 실제 줄바꿈을 측정해 마지막 줄이 4자 이하인 본문 단락을 찾아, 직전 어절 사이 공백을 nbsp로 묶어 한 단어를 함께 끌어내립니다.',
+        before:'마지막 줄: 한 단어만(고아)', after:'직전 공백 nbsp로 묶어 해소', ref:'theory §2',
+        apply:() => {
+          const fixed = fixOrphans();
+          selectEl(bodyEl(), fixed ? `고아 ${fixed}곳 해소` : '고아 없음');
+        } });
 
       // ④ 레이아웃 — 이미지 영역 제안 (본문 2개 이상일 때 중간 지점)
       const bodyIdx = blocks.map((b,i) => b.role==='body' ? i : -1).filter(i => i>=0);
@@ -478,25 +664,27 @@
           } });
       }
 
-      // 인라인 수정 분류
+      // 인라인 수정 분류 (numUnit 글루는 가독성 단계에서 이미 처리 → 정리에서 제외)
       const spell   = ctx.fixes.filter(f => f.category === 'spell');
-      const hygiene = ctx.fixes.filter(f => f.category !== 'spell');
+      const hygiene = ctx.fixes.filter(f => f.category !== 'spell' && f.type !== 'numUnit');
 
       // ⑤ 맞춤법·오타
       if (spell.length) {
         const detail = countLabel(spell);
-        steps.push({ phase:'맞춤법·오타', tag:'spelling', title:'맞춤법·오타 교정',
-          reason:'의존명사 띄어쓰기와 흔한 오타를 교정합니다. 문체는 바꾸지 않고 오류만 손봅니다. (사실 의심·미래 날짜 등은 교정이 아니라 확인 질문으로 남기는 것이 원칙)',
+        steps.push({ phase:'맞춤법·오타', tag:'spelling', title:'맞춤법·띄어쓰기·오타 교정',
+          reason:'문맥 의존 띄어쓰기(의존명사 ‘수’·날짜/괄호 등)와 흔한 오타·맞춤법을 교정합니다. 문체는 바꾸지 않고 오류만 손봅니다. (사실 의심·미래 날짜 등은 교정이 아니라 확인 질문으로 남기는 것이 원칙)',
           before:'교정 전', after:`${detail} — 총 ${spell.length}건`, ref:'theory §8',
-          apply:() => { selectEl(document.getElementById('post'), `맞춤법 ${spell.length}건`); spell.forEach((f,k) => setTimeout(f.apply, k*90)); } });
+          items: spell.map(f => ({ before: f.before, after: f.after, label: f.label })),
+          apply:() => { selectEl(document.getElementById('post'), `맞춤법·띄어쓰기 ${spell.length}건`); spell.forEach((f,k) => setTimeout(f.apply, k*90)); } });
       }
 
       // ⑥ 정리 — 문장부호/따옴표/글루
       if (hygiene.length) {
         const detail = countLabel(hygiene);
         steps.push({ phase:'정리', tag:'hygiene', title:'문장부호 · 공백 정리',
-          reason:'이중공백·부호 앞 공백·말줄임표(…)·둥근 따옴표·숫자+단위 글루를 한 번에 정리합니다. 바뀐 자리마다 잠깐 강조됩니다.',
+          reason:'이중공백·부호 앞 공백·말줄임표(…)·둥근 따옴표·영문 문장 첫 글자 대문자를 한 번에 정리합니다. 바뀐 자리마다 잠깐 강조됩니다.',
           before:'정리 전', after:`${detail} — 총 ${hygiene.length}건`, ref:'theory §7·§1',
+          items: hygiene.map(f => ({ before: f.before, after: f.after, label: f.label })),
           apply:() => { selectEl(document.getElementById('post'), `정리 ${hygiene.length}건`); hygiene.forEach((f,k) => setTimeout(f.apply, k*80)); } });
       }
 
@@ -552,26 +740,74 @@
         document.getElementById('cardTag').textContent = s.tag;
         document.getElementById('cardTitle').textContent = s.title;
         document.getElementById('cardReason').textContent = s.reason;
-        document.getElementById('cardBA').innerHTML = `<span class="b">− ${s.before}</span><span class="a">＋ ${s.after}</span>`;
+        // 실제 수정 항목이 있으면 개별 before→after 목록으로, 없으면 단일 before/after 요약으로.
+        const ba = document.getElementById('cardBA');
+        if (s.items && s.items.length) {
+          ba.innerHTML = s.items.map(it =>
+            `<span class="ba-row"><span class="b">− ${esc(it.before)}</span><span class="a">＋ ${esc(it.after)}</span>`
+            + (it.label ? `<span class="ba-label">${esc(it.label)}</span>` : '') + `</span>`
+          ).join('');
+        } else {
+          ba.innerHTML = `<span class="b">− ${s.before}</span><span class="a">＋ ${s.after}</span>`;
+        }
         document.getElementById('cardRef').textContent = s.ref;
         stepMeta.textContent = `${i+1} / ${STEPS.length} · ${s.phase}`;
         reasonbox.classList.add('show');
       }, 150);
     }
 
+    // 캔버스가 비었는지 — placeholder 토글 + 'Make it Better' 활성 제어의 단일 기준
+    function paperIsEmpty(){
+      // selbox 같은 보조 요소를 제외한 실제 텍스트만 본다.
+      const clone = paper.cloneNode(true);
+      const sb = clone.querySelector('.selbox'); if (sb) sb.remove();
+      return clone.textContent.replace(/ /g,' ').trim().length === 0;
+    }
+    function syncEmptyState(){
+      const empty = (mode === 'edit') && paperIsEmpty();
+      paper.classList.toggle('is-empty', empty);
+      refreshGo();
+    }
+
     function refreshGo(){
       const b = document.getElementById('btnGo');
-      if (mode === 'edit')         { b.textContent = 'Make it Better'; b.disabled = false; }
+      if (mode === 'edit')         { b.textContent = 'Make it Better'; b.disabled = paperIsEmpty(); }
       else if (mode === 'running') { b.textContent = '진행 중…';        b.disabled = true;  }
       else if (mode === 'done')    { b.textContent = '↺ 다시 편집';     b.disabled = false; }
     }
-    function onGo(){ if (mode==='edit') improve(); else if (mode==='done') editMode(); }
+    function onGo(){ if (mode==='edit'){ if (paperIsEmpty()) return; improve(); } else if (mode==='done') editMode(); }
+
+    // 예시 글 불러오기 — 비었을 때 데모용 샘플을 채운다(줄 단위 구조 포함)
+    const SAMPLE_LINES = [
+      '단순 구현에서 블로그 문화 루프를 보기까지',
+      'ceal-terview · AX 공유회 블로그 프로세스 회고',
+      '2026-04-22하동훈(Software Engineer)',
+      '이 글은 2026 년에 진행한 공유회의 블로그 프로세스를  회고하는 글입니다. 단순한 기능 구현에서 시작했지만 결국에는 팀의 글쓰기 문화 전체를 다시 보게 되었고, 그 과정에서 배운 것들을 정리해 보려고 합니다 .',
+      '처음에는 단순한 구현 작업이라고 생각했지만, 여러 사람과 대화하고 회의를 거치면서 이 일이 글쓰기 문화 전체를 바꾸는 일이라는 걸 직접 확인할수있었습니다...',
+      '발행 프로세스는 다음 세 단계로 정리된다:',
+      '1.: 글감을 발굴한다',
+      '2.: 초안을 작성하고 리뷰한다',
+      '3.: 반응을 보고 다시 조직에 공유한다',
+      '> 좋은 문서는 내용만으로 완성되지 않는다. 읽는 사람의 눈이 편하게 흐르도록 다듬는 마지막 한 끗이 퀄리티를 만든다.',
+      '작성일: 2026-06-18 · 우리는 Claude Code를 활용해 약 50 % 의 반복 작업을 줄였습니다.',
+    ];
+    function loadSample(){
+      if (mode !== 'edit') editMode();
+      paper.innerHTML = SAMPLE_LINES.map(l => `<div>${esc(l)}</div>`).join('');
+      syncEmptyState();
+      paper.focus();
+    }
 
     function next(){
       if (idx >= STEPS.length){ finish(); return; }
       const s = STEPS[idx];
       showCard(s, idx);
-      setTimeout(() => s.apply(), 850);
+      // 단계 색으로 가이드라인/배지 전환 — 진행 흐름이 색으로 구분된다.
+      const box = ensureSelbox();
+      box.classList.remove(...PHASE_CLASSES);
+      const cls = PHASE_META[s.phase]?.cls;
+      if (cls) box.classList.add(cls);
+      setTimeout(() => s.apply(), 1050);   // 카드 먼저 읽히고 → 적용(여유 있게)
       idx++;
       barFill.style.width = (idx / STEPS.length * 100) + '%';
     }
@@ -583,7 +819,7 @@
       (function tick(){
         if (idx >= STEPS.length){ finish(); return; }
         next();
-        setTimeout(tick, 1150);
+        setTimeout(tick, 1900);   // 단계 전환을 여유 있게 — 변화가 충분히 보이도록
       })();
     }
     function finish(){
@@ -593,6 +829,13 @@
       document.getElementById('nowPhase').textContent = '완료';
       document.getElementById('nowCount').textContent = `${STEPS.length} / ${STEPS.length}`;
       stepMeta.textContent = `완료 · ${STEPS.length}개 항목 적용`;
+      // 완료되면 마지막 단계의 before/after 상세 카드는 더 이상 의미가 없으므로 거두고,
+      // 완료 안내로 교체한다(진행 중에만 단계별 근거·수정 항목을 보여준다).
+      document.getElementById('cardTag').textContent = '';
+      document.getElementById('cardTitle').textContent = '다듬기 완료';
+      document.getElementById('cardReason').textContent = `${STEPS.length}개 단계를 적용했습니다. ‘↺ 다시 편집’으로 글을 수정하거나 새 글로 다시 시작할 수 있습니다.`;
+      document.getElementById('cardBA').innerHTML = '';
+      document.getElementById('cardRef').textContent = '';
       // 완료되면 결과 전체를 처음부터 보도록 캔버스를 맨 위로 정렬
       const wrap = document.querySelector('.canvasWrap');
       if (wrap) wrap.scrollTo({ top: 0, behavior: 'smooth' });
@@ -612,29 +855,33 @@
         const role = b.getAttribute('data-role'); const t = b.textContent;
         return role === 'quote' ? '> ' + t : t;
       });
-      if (lines.length) paper.innerHTML = lines.map(l => `<div>${esc(l)}</div>`).join('');
+      paper.innerHTML = lines.length ? lines.map(l => `<div>${esc(l)}</div>`).join('') : '';
       paper.setAttribute('contenteditable', 'true');
       paper.classList.remove('fix-keepall','fix-measure','fix-leading','fix-rhythm');
       selbox = null;
       barFill.style.width = '0';
-      stepMeta.textContent = '편집 모드 — 글을 수정한 뒤 ‘Make it Better’';
+      stepMeta.textContent = '편집 모드 — 글을 붙여넣은 뒤 ‘Make it Better’';
       document.getElementById('nowbox').classList.remove('run');
       document.getElementById('nowPhase').textContent = '대기 중';
       document.getElementById('nowCount').textContent = '';
       renderOutline();
       document.getElementById('cardTag').textContent = '';
       document.getElementById('cardTitle').textContent = '편집 준비';
-      document.getElementById('cardReason').textContent = '왼쪽 캔버스의 글을 6단계로 다듬습니다. ‘개선 시작’을 누르면 단계별 근거가 여기에 표시됩니다.';
+      document.getElementById('cardReason').textContent = '왼쪽 캔버스에 다듬고 싶은 글을 붙여넣고 ‘Make it Better’를 누르세요. 6단계로 다듬으며 각 단계의 근거가 여기에 표시됩니다.';
       document.getElementById('cardBA').innerHTML = '';
       document.getElementById('cardRef').textContent = '';
       reasonbox.classList.add('show');
+      syncEmptyState();
       paper.focus();
     }
 
     document.getElementById('btnGo').addEventListener('click', onGo);
+    document.getElementById('loadSample').addEventListener('click', loadSample);
+    // 입력할 때마다 빈 상태(placeholder·버튼 활성)를 동기화
+    paper.addEventListener('input', syncEmptyState);
     renderOutline();
     reasonbox.classList.add('show');
-    refreshGo();
+    syncEmptyState();
   </script>
 </body>
 </html>

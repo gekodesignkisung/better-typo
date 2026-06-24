@@ -11,16 +11,24 @@ export const PARTICLES = [
   '이라', '라고', '이고', '고', '며', '면서', '든지', '나', '이나',
 ];
 
-// 숫자에 붙는 단위 — "2026 년" 같은 분리 방지
+// 숫자에 붙는 단위 — "2026 년" 같은 분리 방지.
+// theory.md §1 단위 집합과 동일하게 유지(단일 기준).
+// 주의: '개월'·'시간'처럼 긴 단위를 짧은 단위(`개`·`시`)보다 앞에 둬야
+//       정규식 교대(|)에서 먼저 매칭되어 부분 매칭 오탐을 피한다.
 export const NUMBER_UNITS = [
-  '년', '월', '일', '시', '분', '초', '개', '명', '번', '차', '원', '달러',
-  '%', 'px', 'em', 'rem', 'pt', 'kg', 'g', 'm', 'cm', 'km', 'ml', 'L',
-  '시간', '주', '회', '쪽', '페이지', '배',
+  '개월', '시간', '페이지',
+  '년', '월', '일', '시', '분', '초',
+  '개', '명', '번', '차', '회', '점', '위', '배', '쪽',
+  '원', '달러', '%',
+  'px', 'em', 'rem', 'pt', 'kg', 'g', 'mm', 'cm', 'km', 'm', 'ml', 'L',
+  '주',
 ];
 
-// 숫자 + 단위 사이 공백을 잡는 정규식 (전역, 멀티라인)
+// 숫자 + 단위 사이 공백을 잡는 정규식 (전역, 멀티라인).
+// 숫자는 천단위 쉼표 포함 다자릿수 허용(`1,000 원`). 단위 뒤에 글자가 붙으면
+// 더 긴 단어의 앞부분일 수 있어(`50 미터법` 등) 경계로 거른다.
 export const NUMBER_UNIT_RE = new RegExp(
-  `(\\d)\\s+(${NUMBER_UNITS.map(escapeRe).join('|')})(?![A-Za-z가-힣])`,
+  `(\\d[\\d,]*)\\s+(${NUMBER_UNITS.map(escapeRe).join('|')})(?![A-Za-z가-힣])`,
   'gu',
 );
 
@@ -44,7 +52,7 @@ export function findAtomicSpaces(text) {
   const hits = [];
   for (const m of text.matchAll(NUMBER_UNIT_RE)) {
     const full = m[0];
-    const spaceIdx = m.index + m[1].length; // 숫자 다음 = 공백 위치
+    const spaceIdx = m.index + full.indexOf(' '); // 숫자와 단위 사이 공백 위치
     hits.push({ at: spaceIdx, before: full, kind: 'number-unit' });
   }
   for (const phrase of FIXED_PHRASES) {

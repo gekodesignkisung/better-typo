@@ -53,13 +53,30 @@ better-typo/
     │       └── unit-rules.mjs  # 조사·숫자+단위·고유명사 원자 단위
     └── resources/
         ├── theory.md           # 이론·임계값 단일 진실 소스
+        ├── studio.html         # 호출 시 여는 인터랙티브 스튜디오
         └── sample.html         # before/after 검증 픽스처
 ```
 
+## 인터랙티브 스튜디오
+
+브라우저에서 직접 글을 넣고 다듬는 과정을 보고 싶으면 `resources/studio.html`을 연다. theory.md
+규칙을 브라우저에서 재현한 **시연·탐색 도구**로, 스크립트 파이프라인과 동일한 단위 집합·오타
+사전·검출 규칙을 따른다(단일 기준은 theory.md).
+
+```bash
+cd .claude/skills/better-typo/resources
+python -m http.server 8799      # 또는: npx --yes serve -l 8799 .
+# → http://localhost:8799/studio.html
+```
+
+빈 캔버스에 글을 붙여넣고(줄바꿈으로 제목·소제목·본문·목록·인용·캡션 구분) **Make it Better**를
+누르면 6단계로 다듬는 과정과 각 단계의 theory §근거가 표시된다. 스튜디오는 **시각적 탐색용**이며,
+실제 파일 변형은 항상 `apply.mjs` 파이프라인(propose → DIFF → approve)을 거친다.
+
 ## 이론
 
-모든 임계값과 규칙은 [theory.md](.claude/skills/better-typo/resources/theory.md)에 문서화되어 있다.
-스크립트와 LLM은 동일한 숫자를 인용한다.
+모든 임계값과 규칙은 [theory.md](.claude/skills/better-typo/resources/theory.md)에 문서화된 **단일
+진실 소스**다. 스크립트·LLM·스튜디오가 모두 동일한 숫자·단위 집합·오타 사전을 인용한다.
 
 ## 라이선스
 

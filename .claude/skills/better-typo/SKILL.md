@@ -26,6 +26,19 @@ description: 한글/CJK 웹 문서의 편집디자인 타이포그래피를 이�
 discover → segment → (render/probe) → detect → propose → DIFF → approve → apply → re-verify
 ```
 
+## Interactive studio (호출 시 옵션 — 사용자가 직접 다듬어 보기)
+사용자가 **브라우저에서 자기 글을 직접 넣고 다듬는 과정을 보고 싶어 하면** `resources/studio.html`을 열어 제공한다. studio는 theory.md 규칙을 브라우저에서 재현한 **시연·탐색 도구**다(단일 기준은 theory.md이며, studio의 검출 규칙·단위 집합·오타 사전은 scripts와 동일하게 정렬돼 있다).
+
+여는 법 (`file://`는 보안상 막히는 경우가 많으니 로컬 서버로):
+```
+# 스킬 디렉터리의 resources에서
+python -m http.server 8799        # 또는: npx --yes serve -l 8799 .
+# → 브라우저에서 http://localhost:8799/studio.html
+```
+사용법: 빈 캔버스에 글을 붙여넣고(줄바꿈으로 제목·소제목·본문·목록·인용·캡션 구분) **Make it Better**를 누르면 6단계(구조→위계→가독성→레이아웃→맞춤법→정리)로 다듬는 과정과 각 단계의 theory §근거를 보여준다. ‘예시 글 불러오기’로 데모 글을 채울 수도 있다.
+
+**중요**: studio는 시각적 탐색용이다. **실제 파일 바이트 변형은 studio가 하지 않는다** — 파일을 고치는 것은 언제나 아래 파이프라인(propose → DIFF → approve → `apply.mjs`)을 거친다.
+
 ### 1. Discover
 `rg --files`로 대상 문서 수집:
 ```
