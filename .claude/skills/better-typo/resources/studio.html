@@ -113,6 +113,26 @@
     }
     .insp-h { font-size: 11px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
 
+    /* 현재 단계 박스 — 상단 고정, 항상 보이게 */
+    .nowbox {
+      position: sticky; top: -22px; z-index: 6;
+      margin: -22px -20px 0; padding: 18px 20px 16px;
+      background: linear-gradient(180deg, #fff 0%, #fcfdff 100%);
+      border-bottom: 1px solid var(--line);
+    }
+    .nowbox.run { background: linear-gradient(180deg, #f3f7ff 0%, #fafcff 100%); }
+    .now-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+    .now-phase {
+      font-size: 15px; font-weight: 700; color: var(--ink); letter-spacing: -.01em;
+      display: inline-flex; align-items: center; gap: 7px;
+    }
+    .nowbox.run .now-phase::before {
+      content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--accent);
+      box-shadow: 0 0 0 0 rgba(47,107,220,.5); animation: pulse 1.4s infinite;
+    }
+    @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(47,107,220,.45)} 70%{box-shadow:0 0 0 7px rgba(47,107,220,0)} 100%{box-shadow:0 0 0 0 rgba(47,107,220,0)} }
+    .now-count { margin-left: auto; font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
     /* 진행 단계 체크리스트 */
     .progress-list { display: flex; flex-direction: column; gap: 13px; margin-top: 10px; }
     .pgroup .pg-head { display: flex; align-items: baseline; gap: 8px; font-size: 13.5px; color: var(--muted); }
@@ -130,20 +150,31 @@
     .pg-items li.done { color: #7b8290; }
     .pg-items li.done::before { background: var(--good); }
 
-    /* 현재 단계 근거 */
-    .reasonbox { border-top: 1px solid var(--line); padding-top: 16px; opacity: 0; transition: opacity .35s ease; }
+    /* 현재 단계 근거 (nowbox 안) */
+    .reasonbox { opacity: 0; transition: opacity .35s ease; }
     .reasonbox.show { opacity: 1; }
-    .reasonbox .tag { font-size: 11px; color: var(--accent); letter-spacing: .03em; }
+    .reasonbox .tag { font-size: 11px; color: var(--accent); letter-spacing: .03em; font-weight: 600; }
     .reasonbox h3 { margin: 5px 0 7px; font-size: 15px; color: var(--ink); }
     .reasonbox .reason { font-size: 13px; line-height: 1.65; color: #5b616c; }
     .reasonbox .ba { margin-top: 11px; font-size: 11.5px; font-family: ui-monospace, "SFMono-Regular", monospace; display: flex; flex-direction: column; gap: 3px; word-break: break-all; }
     .reasonbox .ba .b { color: #c0392b; } .reasonbox .ba .a { color: var(--good); }
     .reasonbox .ref { margin-top: 9px; font-size: 11px; color: var(--muted); }
 
-    .foot { margin-top: auto; display: flex; flex-direction: column; gap: 9px; }
-    .bar { height: 3px; background: var(--line); border-radius: 999px; overflow: hidden; }
+    /* 진행바 — nowbox 하단 */
+    .nowbox .bar { margin-top: 14px; height: 3px; background: var(--line); border-radius: 999px; overflow: hidden; }
     .bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .5s ease; }
+    .foot { margin-top: auto; }
     .step-meta { font-size: 11.5px; color: var(--muted); }
+
+    /* 현재 진행 중인 단계 리스트 항목 강조 강화 */
+    .pgroup.active .pg-head b { color: var(--accent); }
+    .pg-items li.active {
+      color: var(--ink); font-weight: 600;
+      background: rgba(47,107,220,.08); border-radius: 5px;
+      margin-left: -8px; padding: 2px 8px;
+    }
+    .pg-items li.active::before { left: -5px; box-shadow: 0 0 0 3px rgba(47,107,220,.15); }
+    .pg-items li.done::before { background: var(--good); }
   </style>
 </head>
 <body>
@@ -164,19 +195,26 @@
 
     <!-- 우: 인스펙터 -->
     <aside class="inspector">
+      <!-- 현재 단계 + 근거: 진행 중 상단 고정으로 항상 보이게 -->
+      <div class="nowbox" id="nowbox">
+        <div class="now-head">
+          <span class="now-phase" id="nowPhase">대기 중</span>
+          <span class="now-count" id="nowCount"></span>
+        </div>
+        <div class="reasonbox show" id="reasonbox">
+          <div class="tag" id="cardTag"></div>
+          <h3 id="cardTitle">편집 준비</h3>
+          <div class="reason" id="cardReason">왼쪽 캔버스의 글을 6단계로 다듬습니다. ‘Make it Better’를 누르면 현재 단계와 근거가 여기에 표시됩니다.</div>
+          <div class="ba" id="cardBA"></div>
+          <div class="ref" id="cardRef"></div>
+        </div>
+        <div class="bar"><i id="barFill"></i></div>
+      </div>
+
       <div class="insp-h">진행 단계</div>
       <div class="progress-list" id="progress"></div>
 
-      <div class="reasonbox" id="reasonbox">
-        <div class="tag" id="cardTag"></div>
-        <h3 id="cardTitle">편집 준비</h3>
-        <div class="reason" id="cardReason">왼쪽 캔버스의 글을 6단계로 다듬습니다. ‘개선 시작’을 누르면 단계별 근거가 여기에 표시됩니다.</div>
-        <div class="ba" id="cardBA"></div>
-        <div class="ref" id="cardRef"></div>
-      </div>
-
       <div class="foot">
-        <div class="bar"><i id="barFill"></i></div>
         <div class="step-meta" id="stepMeta">대기 중</div>
       </div>
     </aside>
@@ -296,6 +334,8 @@
     }
     function selectEl(el, label){
       if (!el) return;
+      // 적용 대상이 화면 밖이면 캔버스를 스크롤해 가운데로 가져온다.
+      scrollIntoViewIfNeeded(el);
       const box = ensureSelbox();
       const pr = paper.getBoundingClientRect(), br = el.getBoundingClientRect();
       box.style.top = (br.top - pr.top + paper.scrollTop - 4) + 'px';
@@ -304,6 +344,17 @@
       box.style.height = (br.height + 8) + 'px';
       box.querySelector('.badge').textContent = label || '';
       box.classList.add('show');
+    }
+    // 좌측 캔버스(.canvasWrap)에서 대상 요소가 뷰포트 밖이면 부드럽게 스크롤.
+    function scrollIntoViewIfNeeded(el){
+      const wrap = document.querySelector('.canvasWrap');
+      if (!wrap || !el) return;
+      const wr = wrap.getBoundingClientRect(), er = el.getBoundingClientRect();
+      const margin = 80; // 위아래 여유
+      if (er.top < wr.top + margin || er.bottom > wr.bottom - margin) {
+        const target = wrap.scrollTop + (er.top - wr.top) - (wr.height / 2 - er.height / 2);
+        wrap.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
+      }
     }
     function hideSel(){ if (selbox) selbox.classList.remove('show'); }
 
@@ -493,6 +544,9 @@
     // ════ 재생 ════
     function showCard(s, i){
       updateProgress(i);
+      // 현재 단계 배너 (상단 고정) — 항상 보이게
+      document.getElementById('nowPhase').textContent = s.phase;
+      document.getElementById('nowCount').textContent = `${i+1} / ${STEPS.length}`;
       reasonbox.classList.remove('show');
       setTimeout(() => {
         document.getElementById('cardTag').textContent = s.tag;
@@ -525,6 +579,7 @@
     function runAll(){
       if (idx >= STEPS.length){ finish(); return; }
       mode = 'running'; refreshGo();
+      document.getElementById('nowbox').classList.add('run');
       (function tick(){
         if (idx >= STEPS.length){ finish(); return; }
         next();
@@ -534,6 +589,9 @@
     function finish(){
       running = false; mode = 'done'; refreshGo();
       hideSel(); markAllDone();
+      document.getElementById('nowbox').classList.remove('run');
+      document.getElementById('nowPhase').textContent = '완료';
+      document.getElementById('nowCount').textContent = `${STEPS.length} / ${STEPS.length}`;
       stepMeta.textContent = `완료 · ${STEPS.length}개 항목 적용`;
     }
 
@@ -556,7 +614,10 @@
       paper.classList.remove('fix-keepall','fix-measure','fix-leading','fix-rhythm');
       selbox = null;
       barFill.style.width = '0';
-      stepMeta.textContent = '편집 모드 — 글을 수정한 뒤 ‘개선 시작’';
+      stepMeta.textContent = '편집 모드 — 글을 수정한 뒤 ‘Make it Better’';
+      document.getElementById('nowbox').classList.remove('run');
+      document.getElementById('nowPhase').textContent = '대기 중';
+      document.getElementById('nowCount').textContent = '';
       renderOutline();
       document.getElementById('cardTag').textContent = '';
       document.getElementById('cardTitle').textContent = '편집 준비';
