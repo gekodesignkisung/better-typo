@@ -17,6 +17,10 @@ export const CATEGORIES = [
   'line-height',
   'type-scale',
   'letter-spacing',
+  'value-contrast',     // §9 명도 램프
+  'font-pairing',       // §9 폰트 페어링 (선택 수단)
+  'paragraph-rhythm',   // §10 단락 리듬
+  'layout-image',       // §11 이미지 자리 제안
   'punctuation-hygiene',
   'cjk-break-css',
   'spelling',

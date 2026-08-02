@@ -29,16 +29,33 @@ const RULES = [
   {
     name: 'trailing-space',
     re: /[ \t]+$/gmu,
-    fix: () => '',
+    // 마크다운 하드 라인브레이크(줄 끝 공백 2개 이상 = <br>)는 의도된 문법 → 보존.
+    // 변경이 없으면 detectHygiene가 canonical로 보고 skip한다.
+    fix: (m) => (/^ {2,}$/u.test(m) ? m : ''),
     message: '줄 끝 트레일링 공백 제거 (theory §7)',
     // HTML에선 태그 사이 들여쓰기 공백이 본문이 아니라 오탐 → md/mdx 전용
     fileTypes: ['md', 'mdx'],
   },
   {
+    name: 'ellipsis-join',
+    // 말줄임표 뒤에 뒷말이 붙은 경우: … 로 바꾸고 뒷말과 띄운다 (국립국어원 — 앞말 붙임·뒷말 띄움)
+    re: /\.{3,}(?=[가-힣A-Za-z])/gu,
+    fix: () => '… ',
+    message: '말줄임표 … + 뒷말 띄어쓰기 (theory §7)',
+  },
+  {
     name: 'ascii-ellipsis',
-    re: /\.{3}/gu,
+    re: /\.{3,}/gu,
     fix: () => '…',
     message: '... → … 말줄임표 (theory §7)',
+  },
+  {
+    name: 'capitalize-sentence',
+    // 영문 문장 첫 글자 대문자: 줄 맨 앞 소문자 + 4자 이상 소문자 단어 + 공백 + 다음 단어일 때만
+    // (npm·iOS 같은 짧은 식별자·캐멀케이스 오탐 방지 — 애매한 경우는 §8 LLM 판단으로)
+    re: /^[a-z](?=[a-z]{3,} [A-Za-z가-힣])/gmu,
+    fix: (m) => m.toUpperCase(),
+    message: '영문 문장 첫 글자 대문자 (theory §7)',
   },
   {
     name: 'space-after-punct',
@@ -56,22 +73,24 @@ const RULES = [
   },
   {
     name: 'date-word-space',
-    // 날짜 바로 뒤에 글자/괄호가 붙음 (2026-04-22하동훈 → 2026-04-22 하동훈)
-    re: /\d{4}-\d{1,2}-\d{1,2}(?=[가-힣A-Za-z(])/gu,
+    // 날짜 바로 뒤에 한글/여는 괄호가 붙음 (2026-04-22하동훈 → 2026-04-22 하동훈)
+    // 라틴은 제외 — 2026-04-22report.pdf 같은 파일명 파괴 방지
+    re: /\d{4}-\d{1,2}-\d{1,2}(?=[가-힣(])/gu,
     fix: (m) => m + ' ',
     message: '날짜와 다음 말 띄어쓰기 (theory §8)',
   },
   {
     name: 'space-before-paren',
     // 여는 괄호 앞에 띄어쓰기 (하동훈(SE) → 하동훈 (SE))
-    re: /[가-힣A-Za-z0-9](?=\()/gu,
+    // 한글 뒤에서만 — 라틴 식별자+괄호(calc(100%), useState())는 함수 표기이므로 제외
+    re: /[가-힣](?=\()/gu,
     fix: (m) => m + ' ',
     message: '여는 괄호 앞 띄어쓰기 (theory §8)',
   },
   {
     name: 'close-paren-word',
-    // 닫는 괄호 뒤에 띄어쓰기 ()다음 → ) 다음)
-    re: /\)(?=[가-힣A-Za-z])/gu,
+    // 닫는 괄호 뒤에 띄어쓰기 ()다음 → ) 다음) — 한글이 이어질 때만
+    re: /\)(?=[가-힣])/gu,
     fix: (m) => m + ' ',
     message: '닫는 괄호 뒤 띄어쓰기 (theory §8)',
   },
@@ -106,7 +125,8 @@ export function detectHygiene(text, fileType) {
   // 겹침 해소: 같은 텍스트 구간을 두 규칙이 잡으면 하나만 남긴다.
   // 우선순위: 트레일링 공백 제거(완전 제거)가 이중공백 축약보다 강하다.
   const PRIORITY = {
-    'trailing-space': 0, 'space-before-punct': 1, 'double-space': 2, 'ascii-ellipsis': 1,
+    'trailing-space': 0, 'space-before-punct': 1, 'double-space': 2,
+    'ellipsis-join': 0, 'ascii-ellipsis': 1, 'capitalize-sentence': 1,
     'space-after-punct': 1, 'straight-quote-double': 1, 'date-word-space': 1,
     'space-before-paren': 1, 'close-paren-word': 1, 'list-marker-combo': 1,
   };
@@ -135,7 +155,8 @@ if (process.argv[1]?.endsWith('hygiene.mjs')) {
   const file = process.argv[2];
   if (file) {
     const text = readFileSync(file, 'utf8');
-    const issues = detectHygiene(text, fileTypeOf(file)).map((i) => ({ ...i, file }));
+    // id의 <text> 플레이스홀더도 실제 경로로 치환 — 파일 간 id 충돌 방지
+    const issues = detectHygiene(text, fileTypeOf(file)).map((i) => ({ ...i, file, id: i.id.replace('<text>', file) }));
     process.stdout.write(JSON.stringify(buildResult(issues, { files: [file] }), null, 2) + '\n');
   }
 }

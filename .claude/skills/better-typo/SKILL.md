@@ -35,7 +35,7 @@ discover → segment → (render/probe) → detect → propose → DIFF → appr
 python -m http.server 8799        # 또는: npx --yes serve -l 8799 .
 # → 브라우저에서 http://localhost:8799/studio.html
 ```
-사용법: 빈 캔버스에 글을 붙여넣고(줄바꿈으로 제목·소제목·본문·목록·인용·캡션 구분) **Make it Better**를 누르면 6단계(구조→위계→가독성→레이아웃→맞춤법→정리)로 다듬는 과정과 각 단계의 theory §근거를 보여준다. ‘예시 글 불러오기’로 데모 글을 채울 수도 있다.
+사용법: 빈 캔버스에 글을 붙여넣고(줄바꿈으로 제목·소제목·본문·목록·인용·캡션 구분) **교정 시작**을 누르면 7단계(구조→위계→맞춤법→정리→가독성→레이아웃→마무리 점검)로 다듬는 과정과 각 단계의 theory §근거를 보여준다. ‘예시 글 불러오기’로 데모 글을 채울 수도 있다. 문서의 한글 비율을 감지해 한글/라틴 기준(§3·§4)을 자동 분기하므로 영문 글에도 동작한다.
 
 **중요**: studio는 시각적 탐색용이다. **실제 파일 바이트 변형은 studio가 하지 않는다** — 파일을 고치는 것은 언제나 아래 파이프라인(propose → DIFF → approve → `apply.mjs`)을 거친다.
 
@@ -66,9 +66,9 @@ prose/protected 스팬을 얻는다. **protected(코드·인라인코드·URL·�
   - `findAtomicSpaces()`(`scripts/lib/unit-rules.mjs`)로 숫자+단위 등 원자 단위 glue 후보
 - **판단(LLM = 너)** — 문맥·미학이 필요한 것:
   - `cjk-line-break`: probe의 `lines[].lastWord`를 보고, 줄 끝에서 어절/의미 단위가 부자연스럽게 끊겼는지 판단. glue할 공백의 소스 오프셋을 골라 `insert-nbsp` fix 작성.
-  - `orphan-widow`: 마지막 줄 글자수 ≤4(theory §2)면 직전 공백을 nbsp로.
-  - `hierarchy`(theory §5·§6·§9): 역할별 type-scale·웨이트·**명도 램프**·**폰트 페어링**(세리프 제목/인용 + 산세리프 본문) 제안.
-  - `paragraph-rhythm`(§10): 단락 간 세로 여백 운율. `layout-image`(§11): 긴 본문 중간에 이미지 영역 위치/비율 제안(자동 삽입 금지).
+  - `orphan-widow`: 마지막 줄 글자수 ≤4(theory §2)면 직전 공백을 nbsp로. 사용자 메시지에는 "마지막 줄 한 단어" 표현을 쓴다(고아/orphan은 이론 용어).
+  - `hierarchy`(theory §5·§6·§9): 구조 역할 분류는 **§5 판별표**(제목·부제·소제목·본문·목록·참고 목록·인용·캡션 — 제목 ≈80자 이하, 소제목은 종결어미 없이 끝나는 ≈60자 이하 줄, "참고 자료" 뒤는 참고 목록) 기준. 역할별 type-scale·웨이트·**명도 램프** 제안 — **단일 폰트가 기본**이며 폰트 페어링은 질감 대비가 필요할 때만 쓰는 선택 수단(§9).
+  - `paragraph-rhythm`(§10): 단락 간 세로 여백 운율 + 표제부/본문 분리 여백. `layout-image`(§11): 본문 약 1,000자당 1곳(최대 4곳), 섹션 전환점(소제목 앞) 우선으로 이미지 영역 위치/비율 제안(자동 삽입 금지).
   - `spelling`: prose를 읽고 **문맥 의존 띄어쓰기**(의존명사·보조용언·합성어)·오타·맞춤법 교정안(`text-replace`). 한글 맞춤법·국립국어원 기준. 미래 날짜 등 사실 의심은 *교정이 아니라 질문*으로.
   - `cjk-break-css`: 본문에 `word-break: keep-all` 없으면 CSS 제안.
 
@@ -84,6 +84,8 @@ node scripts/apply.mjs .better-typo/result.json <승인한 id...>      # id 생�
 node scripts/apply.mjs .better-typo/result.json --dry               # 미리보기
 ```
 `apply.mjs`는 멱등(이미 nbsp/wbr면 skip)·안전(prose 밖 거부·before 불일치 skip)하게 바이트를 고친다. **css-rule은 자동 적용 안 함** — 사람이 위치를 정한 뒤 Edit로 직접 반영.
+
+**적용 순서 — 출판 워크플로우와 동일 (교정→조판→마감)**: 글자 수를 바꾸는 카테고리(`spelling`·`punctuation-hygiene`)를 **먼저** 적용해 텍스트를 확정하고 → 재프로브 → 그 측정으로 `cjk-line-break`·`orphan-widow` fix를 산출·적용한다. 순서를 지키지 않으면 뒤의 텍스트 변경이 앞의 줄바꿈 측정을 무효화해 한 단어 줄이 재발한다.
 
 ### 8. Re-verify
 3번 프로브를 다시 돌려 `lines[].lastWord` before/after를 비교한다. 줄 끝 분리 해소·고아 해소·measure/행간 개선을 **측정으로** 확인.
