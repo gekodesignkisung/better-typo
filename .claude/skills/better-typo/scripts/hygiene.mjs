@@ -33,6 +33,10 @@ const RULES = [
     // 변경이 없으면 detectHygiene가 canonical로 보고 skip한다.
     fix: (m) => (/^ {2,}$/u.test(m) ? m : ''),
     message: '줄 끝 트레일링 공백 제거 (theory §7)',
+    // 진짜 줄 끝일 때만 — 원문에서 이 공백 바로 뒤가 개행이거나 파일 끝이어야 한다.
+    // prose 청크가 보호영역(URL·코드 등) 경계에서 잘리면 정규식 $가 청크 끝을
+    // 줄 끝으로 오인하므로("코드나 " 뒤 URL), 원문 컨텍스트로 재확인한다.
+    guard: (text, at, end) => end >= text.length || text[end] === '\n' || text[end] === '\r',
     // HTML에선 태그 사이 들여쓰기 공백이 본문이 아니라 오탐 → md/mdx 전용
     fileTypes: ['md', 'mdx'],
   },
@@ -117,7 +121,11 @@ export function detectHygiene(text, fileType) {
         const after = rule.fix(before);
         if (after === before) continue; // 이미 canonical → skip (멱등)
         const at = chunk.start + m.index;
-        raw.push({ rule: rule.name, at, end: at + before.length, before, after });
+        const end = at + before.length;
+        // 원문 컨텍스트 가드: 청크가 보호영역 경계에서 잘려 정규식 앵커($)가
+        // "청크 끝"을 "줄 끝"으로 오인하는 것을 막는다(예: "코드나 " 뒤 URL).
+        if (rule.guard && !rule.guard(text, at, end)) continue;
+        raw.push({ rule: rule.name, at, end, before, after });
       }
     }
   }

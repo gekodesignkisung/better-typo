@@ -33,17 +33,18 @@ export function applyToFile(path, fixes, { dry = false } = {}) {
       log.push({ id: fix.id, status: 'skip', reason: r.reason });
       continue;
     }
-    planned.push({ id: fix.id, ...r });
+    planned.push({ id: fix.id, order: planned.length, ...r });
   }
-  planned.sort((a, b) => b.at - a.at);
+  const kept = removeConflicts(planned, log);
+  kept.sort((a, b) => b.at - a.at);
 
-  for (const p of planned) {
+  for (const p of kept) {
     text = text.slice(0, p.at) + p.insert + text.slice(p.removeEnd ?? p.at);
     log.push({ id: p.id, status: 'apply', at: p.at });
   }
 
   if (!dry) writeFileSync(path, text, 'utf8');
-  return { path, applied: planned.length, log, text };
+  return { path, applied: kept.length, log, text };
 }
 
 function planFix(text, spans, issue) {
@@ -56,7 +57,7 @@ function planFix(text, spans, issue) {
 
   if (fix.kind === 'text-replace') {
     const [a, b] = fix.range;
-    if (!isProse(spans, a)) return { skip: true, reason: 'not-prose' };
+    if (!isProseRange(spans, a, b)) return { skip: true, reason: 'not-prose' };
     if (text.slice(a, b) !== fix.before) return { skip: true, reason: 'stale-before' };
     if (fix.before === fix.after) return { skip: true, reason: 'already-canonical' };
     return { at: a, removeEnd: b, insert: fix.after };
@@ -81,6 +82,37 @@ function planFix(text, spans, issue) {
   }
 
   return { skip: true, reason: `unknown-kind:${fix.kind}` };
+}
+
+function isProseRange(spans, start, end) {
+  if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end <= start) return false;
+  return spans.some((s) => s.kind === 'prose' && start >= s.start && end <= s.end);
+}
+
+function removeConflicts(planned, log) {
+  const sorted = [...planned].sort((a, b) => {
+    const ae = a.removeEnd ?? a.at;
+    const be = b.removeEnd ?? b.at;
+    return a.at - b.at || be - ae || a.order - b.order;
+  });
+  const kept = [];
+  const insertAnchors = new Set();
+  let lastEnd = -1;
+
+  for (const p of sorted) {
+    const end = p.removeEnd ?? p.at;
+    const insertion = end === p.at;
+    const duplicateInsert = insertion && insertAnchors.has(p.at);
+    if (p.at < lastEnd || duplicateInsert) {
+      log.push({ id: p.id, status: 'skip', reason: 'overlap' });
+      continue;
+    }
+    kept.push(p);
+    if (insertion) insertAnchors.add(p.at);
+    lastEnd = Math.max(lastEnd, end);
+  }
+
+  return kept;
 }
 
 // CLI

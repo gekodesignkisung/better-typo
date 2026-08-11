@@ -30,19 +30,37 @@ discover → segment → (render/probe) → detect → propose → DIFF → appr
 | prose/protected 분리, 문장부호 정규화, measure·행간 산술, 멱등 적용 | **스크립트** (결정적) |
 | 의미 단위 줄내림 판단, 고아/과부, 한글 맞춤법, 위계 결정 | **LLM 에이전트** (판단) |
 
-## 설치
+## 설치 · 사용 (에이전트별)
 
-이 레포의 `.claude/skills/better-typo/`를 사용하려는 프로젝트의 `.claude/skills/`로 복사하거나,
-전역 스킬 디렉터리에 둔다. Claude Code에서 `/better-typo`로 호출한다.
+이 레포의 `.claude/skills/better-typo/`를 사용하려는 프로젝트로 복사한다. 코어(`scripts/*.mjs`,
+`resources/theory.md`)는 **에이전트 중립**이라 어디서든 같은 로직으로 동작한다.
+
+- **Claude Code**: `.claude/skills/`에 두고 `/better-typo`로 호출 → `SKILL.md`를 따른다.
+- **OpenAI Codex**: repo skill로 쓰려면 `.agents/skills/better-typo/SKILL.md`를 함께 둔다.
+  Codex는 `$better-typo` 또는 description 매칭으로 이 wrapper를 발견하고, 실제 절차는
+  `.claude/skills/better-typo/AGENTS.md`를 따른다.
+- **다른 에이전트**: 같은 폴더의 `AGENTS.md`를 읽고 동일 파이프라인을 따른다.
+  브라우저 자동화가 없으면 probe(실측 줄바꿈)를 건너뛰고 결정적 항목만 적용한다(정적 폴백).
+- **에이전트 없이(사람·CI)**: CLI 진입점으로 결정적 교정을 바로 돌린다.
+  ```bash
+  node .claude/skills/better-typo/scripts/run.mjs <파일|디렉터리...>          # 검출 → .better-typo/result.json + 요약
+  node .claude/skills/better-typo/scripts/run.mjs <파일...> --dry             # 적용 미리보기(파일 불변)
+  node .claude/skills/better-typo/scripts/run.mjs <파일...> --apply           # 저위험 결정적 항목 적용
+  ```
+  줄내림·마지막 줄 한 단어·맞춤법·위계 등 판단이 필요한 항목은 에이전트 파이프라인이 맡는다.
 
 ## 구조
 
 ```
 better-typo/
 ├── README.md
+├── .agents/skills/better-typo/
+│   └── SKILL.md                # Codex repo skill 진입점 (wrapper)
 └── .claude/skills/better-typo/
-    ├── SKILL.md                # 오케스트레이터
+    ├── SKILL.md                # Claude Code 오케스트레이터
+    ├── AGENTS.md               # Codex 등 범용 에이전트 가이드 (같은 코어)
     ├── scripts/
+    │   ├── run.mjs             # 에이전트 중립 CLI 진입점 (discover→detect→dry/apply)
     │   ├── segment.mjs         # prose/protected 토크나이저 (안전 핵심)
     │   ├── measure.mjs         # measure/line-height/type-scale 산술
     │   ├── hygiene.mjs         # 문장부호·공백 정규화
