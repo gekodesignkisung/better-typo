@@ -1,7 +1,7 @@
 # better-typo
 
 한글/CJK 웹 문서의 **편집디자인 퀄리티**를 이론에 근거해 실제로 개선하는 **에이전트 스킬**.
-Claude Code와 OpenAI Codex 등 범용 에이전트가 같은 코어(스크립트·이론)를 공유해 동일하게 동작한다.
+Claude Code와 OpenAI Codex 등 범용 에이전트가 같은 코어(스크립트·이론)를 공유해 동일하게 동작한다.
 
 > 진단 리포트가 아니라, 실제로 문서를 고친다. 특히 한글 본문에서 같은 글의 인상을 좌우하는
 > **줄내림(줄바꿈) 위치** 같은 미세하고 디테일한 부분을 다듬는다.
@@ -23,7 +23,7 @@ discover → segment → (render/probe) → detect → propose → DIFF → appr
 
 ## 설계 원칙
 
-되돌리기 어려운 바이트 변형은 LLM이 직접 하지 않는다. LLM은 "어디를 어떻게 고칠지" 구조화된 제안만
+되돌리기 어려운 바이트 변형은 LLM이 직접 하지 않는다. LLM은 “어디를 어떻게 고칠지” 구조화된 제안만
 만들고, 무의존성 Node 스크립트가 정확하고 멱등하게 적용한다.
 
 | | 담당 |
@@ -36,7 +36,7 @@ discover → segment → (render/probe) → detect → propose → DIFF → appr
 이 레포의 `.claude/skills/better-typo/`를 사용하려는 프로젝트로 복사한다. 코어(`scripts/*.mjs`,
 `resources/theory.md`)는 **에이전트 중립**이라 어디서든 같은 로직으로 동작한다.
 
-- **Claude Code**: `.claude/skills/`에 두고 `/better-typo`로 호출 → `SKILL.md`를 따른다.
+- **Claude Code**: `.claude/skills/`에 두고 `/better-typo`로 호출 → `SKILL.md`를 따른다.
 - **OpenAI Codex**: repo skill로 쓰려면 `.agents/skills/better-typo/SKILL.md`를 함께 둔다.
   Codex는 `$better-typo` 또는 description 매칭으로 이 wrapper를 발견하고, 실제 절차는
   `.claude/skills/better-typo/AGENTS.md`를 따른다.
