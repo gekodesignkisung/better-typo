@@ -78,9 +78,18 @@ better-typo/
 
 ## 인터랙티브 스튜디오
 
-브라우저에서 직접 글을 넣고 다듬는 과정을 보고 싶으면 `resources/studio.html`을 연다. theory.md
+브라우저에서 직접 글을 넣고 다듬는 과정을 보고 싶으면 스튜디오를 연다. theory.md
 규칙을 브라우저에서 재현한 **시연·탐색 도구**로, 스크립트 파이프라인과 동일한 단위 집합·오타
 사전·검출 규칙을 따른다(단일 기준은 theory.md).
+
+**바로 열기 (GitHub Pages)** — 설치 없이 브라우저에서:
+
+> **https://gekodesignkisung.github.io/better-typo/**
+
+(루트 `index.html`은 `resources/studio.html`로 리다이렉트만 한다 — 단일 사본 원칙.
+`main`에 푸시하면 배포본도 자동 갱신된다.)
+
+로컬에서 열려면:
 
 ```bash
 cd .claude/skills/better-typo/resources
