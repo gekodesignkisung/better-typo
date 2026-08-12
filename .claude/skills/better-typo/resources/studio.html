@@ -327,7 +327,7 @@
       <div class="tagline">보기 좋고, 읽기 좋은 글로 다듬어주는 스킬</div>
     </div>
     <div class="grow"></div>
-    <button class="btn" id="btnGo">교정 시작
+    <button class="btn" id="btnGo">교정 시작</button>
   </div>
   <div class="bar"><i id="barFill"></i></div>
 
@@ -444,10 +444,12 @@
       // 맞춤법·오타 (theory §8) — 의존명사 '수' 띄어쓰기 + 오타 사전(단일 기준)
       add(new RegExp('('+STEMS+')수(있|없)', 'g'), 'spellSpace');
       Object.keys(TYPO).forEach(k => add(new RegExp(k, 'g'), 'spellWord'));
-      // 띄어쓰기 (theory §8): 날짜+글자 / 글자·숫자+여는괄호 / 닫는괄호+글자
-      add(/(\d{4}-\d{1,2}-\d{1,2})([가-힣A-Za-z(])/g, 'spaceJoin');
-      add(/([가-힣A-Za-z0-9])(\()/g, 'spaceJoin');
-      add(/(\))([가-힣A-Za-z])/g, 'spaceJoin');
+      // 띄어쓰기 (theory §8) — 코어 hygiene.mjs의 date-word-space·space-before-paren·close-paren-word와
+      // 같은 형태로 맞춘다. 세 규칙 모두 "매칭 뒤에 공백 삽입"이라 뒷글자는 lookahead로만 보고
+      // 매칭 텍스트는 앞부분만 잡는다. 라틴을 대상에서 빼는 것이 핵심 — 아래 오탐을 막는다.
+      add(/\d{4}-\d{1,2}-\d{1,2}(?=[가-힣(])/g, 'spaceJoin');   // 라틴 제외: 2026-04-22report.pdf 보존
+      add(/[가-힣](?=\()/g, 'spaceJoin');                        // 한글 뒤에서만: calc(100%)·useState() 보존
+      add(/\)(?=[가-힣])/g, 'spaceJoin');
       // 문장부호/공백 (theory §7)
       // 영문 문장 첫 글자 대문자 (theory §7): 줄 맨 앞 첫 글자(소문자 영문)만 잡는다.
       // 안전 조건 — 첫 단어가 4자 이상 모두 소문자(약어·식별자 npm/iOS, 캐멀케이스 iPhone 제외)이고
@@ -456,10 +458,12 @@
       add(/\.{3,}(?=[가-힣A-Za-z])/g, 'ellipsisJoin');  // 말줄임표 뒤에 뒷말이 붙음 → … + 띄어쓰기 (국립국어원: 뒷말과 띄움)
       add(/\.{3,}/g, 'ellipsis');
       add(/(\d+)\.\s?:/g, 'numMarker');   // 어색한 번호 마커 1.: → 1.
-      add(/"([^"\n]{1,100})"/g, 'quote');
-      add(/ +([.,!?;:。，、])/g, 'spacePunct');
-      add(/(?<=[가-힣A-Za-z])([.,!?])(?=[가-힣A-Za-z])/g, 'spaceAfterPunct');  // 다.특히 → 다. 특히
-      add(/ {2,}/g, 'doubleSpace');
+      add(/"([^"\n]{1,200})"/g, 'quote');
+      add(/ +([,.!?;:、。」』）)])/g, 'spacePunct');
+      // 부호 뒤 띄어쓰기(다.특히 → 다. 특히): 다음 글자가 **한글일 때만** —
+      // 라틴을 허용하면 영문 약어 U.S.를 "U. S."로 깨뜨린다 (theory §7).
+      add(/(?<=[가-힣A-Za-z])([.,!?])(?=[가-힣])/g, 'spaceAfterPunct');
+      add(/(?<=\S) {2,}(?=\S)/g, 'doubleSpace');   // 줄 양끝 공백은 제외 — 같은 줄 안의 연속 공백만
       // 숫자+단위 글루 (theory §1)
       add(new RegExp('(\\d[\\d,]*)\\s('+UNIT+')(?![A-Za-z가-힣])', 'g'), 'numUnit');
       // URL 보호(§7): URL 범위와 겹치는 매칭은 제거 — github.io를 "부호 뒤 띄어쓰기"로 깨지 않게.
@@ -503,9 +507,11 @@
         beforeHTML = esc(m.raw); fixedHTML = esc(fixed); before = m.raw; after = fixed;
         category='spell'; label='띄어쓰기(의존명사 ‘수’)'; ref='§8';
       } else if (t === 'spaceJoin') {
-        const a = m.g[1], b2 = m.g[2];
-        beforeHTML = esc(a)+esc(b2); fixedHTML = esc(a)+' '+esc(b2);
-        before = a+b2; after = a+' '+b2; category='spell'; label='띄어쓰기'; ref='§8';
+        // 매칭이 앞부분만이므로(뒷글자는 lookahead) 공백은 매칭 뒤에 붙인다.
+        // 뒷글자는 스팬 밖이라 수정 대상이 아니고, 카드 표시용으로만 한 글자 미리 본다.
+        const nx = m.g.input.slice(m.end, m.end + 1);
+        beforeHTML = esc(m.raw); fixedHTML = esc(m.raw)+' ';
+        before = m.raw+nx; after = m.raw+' '+nx; category='spell'; label='띄어쓰기'; ref='§8';
       } else if (t === 'spaceAfterPunct') {
         const p = m.raw;
         beforeHTML = esc(p); fixedHTML = esc(p)+' ';
@@ -633,16 +639,30 @@
       }
       return total ? lastLineChars : null;
     }
+    // 마지막 공백을 nbsp(U+00A0)로 바꿔 직전 어절을 함께 내려보낸다.
+    // innerHTML 문자열이 아니라 **텍스트 노드**에서 찾는다 — 앞 단계(맞춤법·정리)가 남긴
+    // <span class="fixspan" id="fx3"> 태그가 블록 안에 있어서, innerHTML의 마지막 공백은
+    // 태그 내부의 '속성 구분 공백'일 수 있다. 그 공백을 nbsp로 바꾸면 속성 이름이 깨져
+    // (id → nbsp+id) getElementById가 실패하고, 글루도 화면에 나타나지 않는다.
+    function glueLastSpace(el){
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      const nodes = [];
+      for (let n = walker.nextNode(); n; n = walker.nextNode()) nodes.push(n);
+      for (let i = nodes.length - 1; i >= 0; i--) {   // 뒤에서부터, 공백이 있는 첫 텍스트 노드
+        const t = nodes[i].textContent;
+        const at = t.lastIndexOf(' ');
+        if (at === -1) continue;
+        nodes[i].textContent = t.slice(0, at) + ' ' + t.slice(at + 1);
+        return true;
+      }
+      return false;
+    }
     function fixOrphans(){
       let fixed = 0;
       paper.querySelectorAll('.blk[data-role="body"]').forEach(el => {
         const n = lastLineCharCount(el);
         if (n === null || n === 0 || n > 4) return;       // 고아 아님
-        // 마지막 공백을 nbsp로: 직전 어절을 함께 내려보낸다.
-        const html = el.innerHTML;
-        const lastSpace = html.lastIndexOf(' ');
-        if (lastSpace === -1) return;
-        el.innerHTML = html.slice(0, lastSpace) + ' ' + html.slice(lastSpace + 1);
+        if (!glueLastSpace(el)) return;                   // 묶을 공백이 없는 단락
         flash(el); fixed++;
       });
       return fixed;
@@ -824,6 +844,7 @@
         steps.push({ phase:'가독성', tag:'cjk-glue', title:'의미 단위 묶기',
           reason:'keep-all로도 막지 못하는 "끊기면 안 되는 곳"이 있습니다. 숫자+단위(2026 년·50 %)나 고정 복합어처럼 한 덩어리로 읽혀야 하는 어절 쌍은 줄 끝에서 갈라지지 않도록 사이 공백을 nbsp로 묶습니다.',
           before:'2026 / 년 (줄 끝에서 분리 가능)', after:`숫자+단위 등 ${glue.length}곳 nbsp로 묶음`, ref:'theory §1',
+          pace: glue.length * 120,   // 글루는 items 없이 순차 적용 — 진행 간격에 반영 (runAll)
           apply:() => { selectEl(bodyEl(), `글루 ${glue.length}곳`); glue.forEach((f,k) => setTimeout(f.apply, k*120)); } });
       }
       steps.push({ phase:'가독성', tag:'measure', title:'글줄 길이',
@@ -1072,7 +1093,11 @@
       (function tick(){
         if (idx >= STEPS.length){ finish(); return; }
         next();
-        setTimeout(tick, 2600);   // 단계 전환을 여유 있게 — 변화가 충분히 보이고 보이스 안내도 끝나도록
+        // 기본 2600ms — 카드가 읽히고 변화가 보일 만큼. 다만 항목을 하나씩 적용하는 스텝
+        // (맞춤법·정리·글루)은 항목 수만큼 더 걸려서, 고정 간격이면 다음 단계가 겹쳐 시작된다.
+        const s = STEPS[idx - 1];
+        const pace = s ? (s.pace || (s.items ? s.items.length * 120 : 0)) : 0;
+        setTimeout(tick, Math.min(6000, 2600 + pace));
       })();
     }
     function finish(){
@@ -1102,7 +1127,9 @@
       STEPS = r.steps; idx = 0;
       renderProgress(STEPS);
       barFill.style.width = '0';
-      stepMeta.textContent = `7단계 · ${STEPS.length}개 항목`;
+      // 실제로 만들어진 단계만 센다 — 짧은 글은 레이아웃(§11)처럼 조건이 안 맞는 단계가 빠진다
+      const phases = new Set(STEPS.map(s => s.phase)).size;
+      stepMeta.textContent = `${phases}단계 · ${STEPS.length}개 항목`;
       runAll();   // 클릭 한 번에 끝까지
     }
     function editMode(){
