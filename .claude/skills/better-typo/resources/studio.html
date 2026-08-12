@@ -444,12 +444,12 @@
       // 맞춤법·오타 (theory §8) — 의존명사 '수' 띄어쓰기 + 오타 사전(단일 기준)
       add(new RegExp('('+STEMS+')수(있|없)', 'g'), 'spellSpace');
       Object.keys(TYPO).forEach(k => add(new RegExp(k, 'g'), 'spellWord'));
-      // 띄어쓰기 (theory §8) — 코어 hygiene.mjs의 date-word-space·space-before-paren·close-paren-word와
-      // 같은 형태로 맞춘다. 세 규칙 모두 "매칭 뒤에 공백 삽입"이라 뒷글자는 lookahead로만 보고
-      // 매칭 텍스트는 앞부분만 잡는다. 라틴을 대상에서 빼는 것이 핵심 — 아래 오탐을 막는다.
-      add(/\d{4}-\d{1,2}-\d{1,2}(?=[가-힣(])/g, 'spaceJoin');   // 라틴 제외: 2026-04-22report.pdf 보존
-      add(/[가-힣](?=\()/g, 'spaceJoin');                        // 한글 뒤에서만: calc(100%)·useState() 보존
-      add(/\)(?=[가-힣])/g, 'spaceJoin');
+      // 띄어쓰기 (theory §8) — 코어 hygiene.mjs의 date-word-space와 같은 형태.
+      // "매칭 뒤에 공백 삽입"이라 뒷글자는 lookahead로만 보고 매칭 텍스트는 앞부분만 잡는다.
+      // 라틴을 대상에서 빼는 것이 핵심 — 2026-04-22report.pdf 같은 파일명 오탐을 막는다.
+      // 괄호 띄어쓰기 규칙은 없다 — 국립국어원 문장부호 규정상 여는 괄호는 앞말에 붙여 쓰고(서울(Seoul)),
+      // 닫는 괄호 뒤는 조사/새 어절 구분이 필요한 문맥 판단이라 §8 LLM 몫이다.
+      add(/\d{4}-\d{1,2}-\d{1,2}(?=[가-힣])/g, 'spaceJoin');
       // 문장부호/공백 (theory §7)
       // 영문 문장 첫 글자 대문자 (theory §7): 줄 맨 앞 첫 글자(소문자 영문)만 잡는다.
       // 안전 조건 — 첫 단어가 4자 이상 모두 소문자(약어·식별자 npm/iOS, 캐멀케이스 iPhone 제외)이고
@@ -816,7 +816,7 @@
       if (spell.length) {
         const detail = countLabel(spell);
         steps.push({ phase:'맞춤법·오타', tag:'spelling', title:'맞춤법·띄어쓰기·오타 교정',
-          reason:'문맥 의존 띄어쓰기(의존명사 ‘수’·날짜/괄호 등)와 흔한 오타·맞춤법을 교정합니다. 문체는 바꾸지 않고 오류만 손봅니다. 글자 수가 바뀌는 교정이라 줄바꿈 측정(가독성)보다 먼저 확정합니다.',
+          reason:'문맥 의존 띄어쓰기(의존명사 ‘수’·날짜 뒤 붙음 등)와 흔한 오타·맞춤법을 교정합니다. 문체는 바꾸지 않고 오류만 손봅니다. 글자 수가 바뀌는 교정이라 줄바꿈 측정(가독성)보다 먼저 확정합니다.',
           before:'교정 전', after:`${detail} — 총 ${spell.length}건`, ref:'theory §8',
           items: spell.map(f => ({ before: f.before, after: f.after, label: f.label })),
           apply:() => { selectEl(document.getElementById('post'), `맞춤법·띄어쓰기 ${spell.length}건`); spell.forEach((f,k) => setTimeout(f.apply, k*90)); } });
@@ -1025,8 +1025,9 @@
     // 예시 글 불러오기 — 비었을 때 데모용 샘플을 채운다(줄 단위 구조 포함)
     // 예시 글 — 7단계 전 항목이 발동되도록 설계된 픽스처:
     // 표제부(제목·부제·바이라인) / 섹션 소제목 2 / 목록 / 인용 / 참고 자료 / 캡션,
-    // 오타(역활·몇일)·의존명사(할수있)·날짜/괄호 붙음, 이중 공백·부호 앞 공백·말줄임표·
+    // 오타(역활·몇일)·의존명사(할수있)·날짜 뒤 붙음, 이중 공백·부호 앞 공백·말줄임표·
     // 곧은따옴표·다.특히·1.: 마커·영문 소문자 문장, 숫자+단위 글루(2026 년·50 %·3 개)
+    // (괄호는 국립국어원 규정상 앞말에 붙여 쓰므로 교정 대상이 아님 — 하동훈(Software Engineer) 유지)
     const SAMPLE_LINES = [
       '단순 구현에서 블로그 문화 루프를 보기까지',
       '기능 하나를 만들다 팀의 글쓰기 문화를 다시 보게 된 회고',

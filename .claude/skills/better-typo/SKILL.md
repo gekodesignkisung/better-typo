@@ -61,7 +61,7 @@ prose/protected 스팬을 얻는다. **protected(코드·인라인코드·URL·�
 
 ### 4. Detect
 - **결정적(스크립트)** — 형태로 확정되는 안전한 것만:
-  - `node scripts/hygiene.mjs <file>` → 문장부호/공백 + **기계적 띄어쓰기**: 이중공백·부호 앞/뒤 띄어쓰기(`다.특히`→`다. 특히`)·둥근 따옴표·말줄임표·날짜+말·괄호 앞뒤 띄어쓰기 (theory §7~§8 안전 부분집합)
+  - `node scripts/hygiene.mjs <file>` → 문장부호/공백 + **기계적 띄어쓰기**: 이중공백·부호 앞/뒤 띄어쓰기(`다.특히`→`다. 특히`)·둥근 따옴표·말줄임표·날짜+말 (theory §7~§8 안전 부분집합). 괄호는 교정하지 않음 — 여는 괄호는 앞말에 붙임(국립국어원), 닫는 괄호 뒤는 조사/새 어절 문맥 판단(§8 LLM)
   - probe 결과를 `evaluateMeasurements()`(`scripts/measure.mjs`)에 넣어 measure/line-height/type-scale/letter-spacing 이슈
   - `findAtomicSpaces()`(`scripts/lib/unit-rules.mjs`)로 숫자+단위 등 원자 단위 glue 후보
 - **판단(LLM = 너)** — 문맥·미학이 필요한 것:

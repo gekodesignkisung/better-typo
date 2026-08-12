@@ -42,7 +42,7 @@ protected 스팬은 이후 어떤 변형도 금지. 모든 수정은 prose 스�
 - **브라우저가 없는 환경(정적 폴백)**: probe를 건너뛴다. 그러면 다음만 가능하다 — `run.mjs`의 결정적 항목(hygiene·glue)과 `cjk-break-css`(본문에 `word-break: keep-all` 누락 시 CSS 제안). **줄내림·마지막 줄 한 단어(고아) 판단은 생략**(실측이 없으므로). 이를 사용자에게 명시한다.
 
 ### 4. Detect
-- **결정적(스크립트)**: `node .claude/skills/better-typo/scripts/hygiene.mjs <file>` (문장부호/공백), `findAtomicSpaces()`(`scripts/lib/unit-rules.mjs`, 숫자+단위 glue). probe가 있으면 `evaluateMeasurements()`(`scripts/measure.mjs`)로 measure/line-height/type-scale/letter-spacing.
+- **결정적(스크립트)**: `node .claude/skills/better-typo/scripts/hygiene.mjs <file>` (문장부호/공백 — 괄호는 교정하지 않음: 여는 괄호는 앞말에 붙임(국립국어원), 닫는 괄호 뒤는 §8 문맥 판단), `findAtomicSpaces()`(`scripts/lib/unit-rules.mjs`, 숫자+단위 glue). probe가 있으면 `evaluateMeasurements()`(`scripts/measure.mjs`)로 measure/line-height/type-scale/letter-spacing.
 - **판단(에이전트)**: theory 참조로 아래를 만든다.
   - `cjk-line-break`: probe `lines[].lastWord`를 보고 줄 끝 어절/의미 단위가 부자연스럽게 끊겼으면 glue 공백의 **소스 오프셋**을 골라 `insert-nbsp` fix.
   - `orphan-widow`: 마지막 줄 글자수 ≤4(§2)면 직전 공백을 nbsp로. 사용자에겐 "마지막 줄 한 단어"로 표현(고아/orphan은 이론 용어).

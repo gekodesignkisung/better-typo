@@ -77,27 +77,16 @@ const RULES = [
   },
   {
     name: 'date-word-space',
-    // 날짜 바로 뒤에 한글/여는 괄호가 붙음 (2026-04-22하동훈 → 2026-04-22 하동훈)
-    // 라틴은 제외 — 2026-04-22report.pdf 같은 파일명 파괴 방지
-    re: /\d{4}-\d{1,2}-\d{1,2}(?=[가-힣(])/gu,
+    // 날짜 바로 뒤에 한글이 붙음 (2026-04-22하동훈 → 2026-04-22 하동훈)
+    // 라틴은 제외 — 2026-04-22report.pdf 같은 파일명 파괴 방지.
+    // 여는 괄호도 제외 — 국립국어원 문장부호 규정상 괄호는 앞말에 붙여 쓴다 (2026-04-22(주) 유지).
+    re: /\d{4}-\d{1,2}-\d{1,2}(?=[가-힣])/gu,
     fix: (m) => m + ' ',
     message: '날짜와 다음 말 띄어쓰기 (theory §8)',
   },
-  {
-    name: 'space-before-paren',
-    // 여는 괄호 앞에 띄어쓰기 (하동훈(SE) → 하동훈 (SE))
-    // 한글 뒤에서만 — 라틴 식별자+괄호(calc(100%), useState())는 함수 표기이므로 제외
-    re: /[가-힣](?=\()/gu,
-    fix: (m) => m + ' ',
-    message: '여는 괄호 앞 띄어쓰기 (theory §8)',
-  },
-  {
-    name: 'close-paren-word',
-    // 닫는 괄호 뒤에 띄어쓰기 ()다음 → ) 다음) — 한글이 이어질 때만
-    re: /\)(?=[가-힣])/gu,
-    fix: (m) => m + ' ',
-    message: '닫는 괄호 뒤 띄어쓰기 (theory §8)',
-  },
+  // 괄호 띄어쓰기 규칙 없음 — 국립국어원 문장부호 규정:
+  //   여는 괄호는 앞말에 붙여 쓴다(서울(Seoul)) → 교정 대상 아님.
+  //   닫는 괄호 뒤는 조사면 붙이고(`(SE)이`) 새 어절이면 띄우므로 문맥 판단 → §8 LLM 몫.
   {
     name: 'list-marker-combo',
     // 어색한 번호 마커 조합: 1.: → 1.  (마침표·콜론 중복)
@@ -136,7 +125,7 @@ export function detectHygiene(text, fileType) {
     'trailing-space': 0, 'space-before-punct': 1, 'double-space': 2,
     'ellipsis-join': 0, 'ascii-ellipsis': 1, 'capitalize-sentence': 1,
     'space-after-punct': 1, 'straight-quote-double': 1, 'date-word-space': 1,
-    'space-before-paren': 1, 'close-paren-word': 1, 'list-marker-combo': 1,
+    'list-marker-combo': 1,
   };
   raw.sort((a, b) => a.at - b.at || PRIORITY[a.rule] - PRIORITY[b.rule]);
   const kept = [];
