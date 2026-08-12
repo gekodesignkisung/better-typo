@@ -59,10 +59,10 @@ node .claude/skills/better-typo/scripts/apply.mjs .better-typo/result.json --dry
 ```
 `apply.mjs`는 멱등(이미 nbsp/wbr면 skip)·안전(prose 밖 거부·before 불일치 skip). **css-rule은 자동 적용 안 함** — 사람이 위치를 정한 뒤 반영.
 
-**적용 순서 (교정→조판→마감)**: 글자 수를 바꾸는 카테고리(`spelling`·`punctuation-hygiene`)를 **먼저** 적용해 텍스트를 확정 → 재프로브 → 그 측정으로 `cjk-line-break`·`orphan-widow` 산출·적용. 순서를 어기면 뒤 텍스트 변경이 앞 줄바꿈 측정을 무효화한다.
+**적용 순서 (교정→판형→조판→마감)**: ① 교정 — 글자 수를 바꾸는 카테고리(`spelling`·`punctuation-hygiene`)로 텍스트 확정 → ② 판형 — 승인된 `css-rule` 전부(keep-all·measure·행간·type-scale·자간) 반영. 폭·글자 크기·자간은 모두 줄바꿈을 움직인다 → ③ 조판 — 재프로브 후 그 측정으로 `cjk-line-break`·`orphan-widow` 산출·적용 → ④ 마감 — 재검증. 순서를 어기면 뒤의 텍스트·판형 변경이 앞 줄바꿈 측정을 무효화한다.
 
 ### 8. Re-verify
-probe를 다시 돌려(가능 환경) before/after 비교. 줄 끝 분리·마지막 줄 한 단어 해소, measure/행간 개선을 측정으로 확인. 정적 환경이면 `run.mjs`로 hygiene 재검출 0건(멱등)만 확인.
+probe를 다시 돌려(가능 환경) before/after 비교. 줄 끝 분리·마지막 줄 한 단어 해소, measure/행간 개선을 측정으로 확인. 정적 환경이면 `run.mjs`로 hygiene 재검출이 **0건이 될 때까지 재적용** — 겹친 교정은 한 실행에 하나만 적용되고 나머지는 다음 실행에서 수렴한다(멱등).
 
 ## fix 형식
 `makeIssue({ category, severity, file, message, fix?, evidence? })`

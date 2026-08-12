@@ -85,7 +85,13 @@ node scripts/apply.mjs .better-typo/result.json --dry               # 미리보�
 ```
 `apply.mjs`는 멱등(이미 nbsp/wbr면 skip)·안전(prose 밖 거부·before 불일치 skip)하게 바이트를 고친다. **css-rule은 자동 적용 안 함** — 사람이 위치를 정한 뒤 Edit로 직접 반영.
 
-**적용 순서 — 출판 워크플로우와 동일 (교정→조판→마감)**: 글자 수를 바꾸는 카테고리(`spelling`·`punctuation-hygiene`)를 **먼저** 적용해 텍스트를 확정하고 → 재프로브 → 그 측정으로 `cjk-line-break`·`orphan-widow` fix를 산출·적용한다. 순서를 지키지 않으면 뒤의 텍스트 변경이 앞의 줄바꿈 측정을 무효화해 한 단어 줄이 재발한다.
+**적용 순서 — 출판 워크플로우와 동일 (교정→판형→조판→마감)**:
+1. **교정** — 글자 수를 바꾸는 카테고리(`spelling`·`punctuation-hygiene`)를 먼저 적용해 텍스트를 확정한다.
+2. **판형** — 승인된 `css-rule` 전부(keep-all·measure·행간·type-scale·자간)를 반영한다. 폭·글자 크기·자간 변경은 모두 줄바꿈 위치를 움직이므로, 폭 종속 교정보다 반드시 먼저다 (theory §1 적용 순서 근거).
+3. **조판** — 재프로브 → 그 측정으로 `cjk-line-break`·`orphan-widow` fix를 산출·적용한다.
+4. **마감** — 재검증. hygiene 재검출이 **0건이 될 때까지 재적용**한다 — 겹침 해소가 한 지점당 한 교정만 남기므로 겹친 교정은 다음 실행에서 수렴한다(멱등이라 반복 안전).
+
+순서를 지키지 않으면 뒤의 텍스트·판형 변경이 앞의 줄바꿈 측정을 무효화해 한 단어 줄이 재발한다.
 
 ### 8. Re-verify
 3번 프로브를 다시 돌려 `lines[].lastWord` before/after를 비교한다. 줄 끝 분리 해소·고아 해소·measure/행간 개선을 **측정으로** 확인.

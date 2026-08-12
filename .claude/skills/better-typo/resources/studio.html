@@ -682,13 +682,14 @@
     // ════ 단계 메타 ════
     // 순서 원칙 — 출판 워크플로우와 동일: 교정(텍스트 확정) → 조판(측정 기반) → 마감(재검증).
     // 글자 수를 바꾸는 맞춤법·정리가 줄바꿈 측정(가독성)보다 먼저 와야 한 단어 줄 재발이 없다.
+    // 가독성 안에서도 판형(keep-all·글줄 길이·행간)을 먼저 확정한 뒤 글루·마지막 줄을 측정한다 (theory §1-1).
     const PHASE_ORDER = ['구조 분석','위계','맞춤법·오타','정리','가독성','레이아웃','마무리 점검'];
     const PHASE_META = {
       '구조 분석':  { n:1, desc:'제목·소제목·본문·인용·캡션', cls:'ph-structure' },
       '위계':       { n:2, desc:'크기·웨이트·명도',            cls:'ph-hierarchy' },
       '맞춤법·오타': { n:3, desc:'띄어쓰기·맞춤법',             cls:'ph-spell' },
       '정리':       { n:4, desc:'문장부호·따옴표',              cls:'ph-tidy' },
-      '가독성':     { n:5, desc:'줄내림·글루·글줄 길이·행간·리듬', cls:'ph-read' },
+      '가독성':     { n:5, desc:'줄내림·글줄 길이·행간·글루·리듬', cls:'ph-read' },
       '레이아웃':   { n:6, desc:'이미지 영역 제안',            cls:'ph-layout' },
       '마무리 점검': { n:7, desc:'재측정·요약',                 cls:'ph-verify' },
     };
@@ -838,15 +839,6 @@
         reason:'줄은 단어(어절) 경계에서만 끊겨야 깔끔합니다. word-break: keep-all로 어절 중간·조사 앞 끊김을 막습니다 — 라틴 문자는 원래 단어 단위로만 끊기므로 모든 언어에 공통 적용해도 안전합니다.',
         before:'word-break: normal', after:'word-break: keep-all', ref:'theory §1',
         apply:() => { selectEl(bodyEl(), '줄내림'); paper.classList.add('fix-keepall'); } });
-      // 의미 단위 glue (§1) — 끊기면 안 되는 어절 쌍(숫자+단위, 고정 복합어)을 nbsp로 묶는다.
-      // detect()가 만든 numUnit fix가 곧 glue 대상이다.
-      if (glue.length) {
-        steps.push({ phase:'가독성', tag:'cjk-glue', title:'의미 단위 묶기',
-          reason:'keep-all로도 막지 못하는 "끊기면 안 되는 곳"이 있습니다. 숫자+단위(2026 년·50 %)나 고정 복합어처럼 한 덩어리로 읽혀야 하는 어절 쌍은 줄 끝에서 갈라지지 않도록 사이 공백을 nbsp로 묶습니다.',
-          before:'2026 / 년 (줄 끝에서 분리 가능)', after:`숫자+단위 등 ${glue.length}곳 nbsp로 묶음`, ref:'theory §1',
-          pace: glue.length * 120,   // 글루는 items 없이 순차 적용 — 진행 간격에 반영 (runAll)
-          apply:() => { selectEl(bodyEl(), `글루 ${glue.length}곳`); glue.forEach((f,k) => setTimeout(f.apply, k*120)); } });
-      }
       steps.push({ phase:'가독성', tag:'measure', title:'글줄 길이',
         reason: latinDoc
           ? '라틴 본문은 한 줄 50–75자(이상적 66자)가 기준입니다. max-width 68ch로 눈이 다음 줄 시작을 쉽게 찾는 폭을 잡습니다.'
@@ -859,6 +851,15 @@
           : '본문 행간 1.3은 한글에 좁습니다. 권장 1.6–1.8에 맞춰 1.78로 넓혀 눈이 편하게 흐르도록 합니다.',
         before:'line-height 1.3', after: latinDoc ? 'line-height 1.6' : 'line-height 1.78', ref:'theory §4',
         apply:() => { selectEl(bodyEl(), '행간'); paper.classList.add('fix-leading'); } });
+      // 의미 단위 glue (§1) — 판형(keep-all·글줄 길이·행간) 확정 뒤에 적용 (theory §1-1 순서 근거).
+      // detect()가 만든 numUnit fix가 곧 glue 대상이다.
+      if (glue.length) {
+        steps.push({ phase:'가독성', tag:'cjk-glue', title:'의미 단위 묶기',
+          reason:'keep-all로도 막지 못하는 "끊기면 안 되는 곳"이 있습니다. 숫자+단위(2026 년·50 %)나 고정 복합어처럼 한 덩어리로 읽혀야 하는 어절 쌍은 줄 끝에서 갈라지지 않도록 사이 공백을 nbsp로 묶습니다.',
+          before:'2026 / 년 (줄 끝에서 분리 가능)', after:`숫자+단위 등 ${glue.length}곳 nbsp로 묶음`, ref:'theory §1',
+          pace: glue.length * 120,   // 글루는 items 없이 순차 적용 — 진행 간격에 반영 (runAll)
+          apply:() => { selectEl(bodyEl(), `글루 ${glue.length}곳`); glue.forEach((f,k) => setTimeout(f.apply, k*120)); } });
+      }
       steps.push({ phase:'가독성', tag:'rhythm', title:'단락 세로 리듬',
         reason:'단락 사이 여백을 글자 크기에 비례해 키워 세로 운율을 만듭니다. 문단 덩어리가 분명해져 스캔이 쉬워집니다.',
         before:'문단 간격 좁음', after:'단락 간격 1.35em', ref:'theory §10',

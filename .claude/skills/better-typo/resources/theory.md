@@ -34,6 +34,16 @@ overflow-wrap: break-word;  /* 단, 한 어절이 줄보다 길면 강제 줄바
 
 ---
 
+## 1-1. 적용 순서 근거 — 판형이 줄바꿈을 결정한다
+
+줄바꿈 위치는 판형(글줄 폭·글자 크기·자간·word-break)의 함수다. 따라서 실측에 기반하는
+폭 종속 교정(§1의 문맥 glue, §2 마지막 줄 한 단어)은 반드시 **텍스트(§7·§8)와 판형
+CSS(§1 keep-all·§3 폭·§4 행간·§5 스케일·§6 자간)가 모두 확정된 뒤의 재실측**에 근거한다 —
+판형이 바뀌면 모든 줄바꿈이 이동해 앞선 실측이 무효가 된다.
+단, 숫자+단위·고정 복합어 glue는 어떤 폭에서도 끊기면 안 되는 의미 단위이므로 순서와 무관하다.
+
+---
+
 ## 2. 외톨이 단어(고아, orphan) / 과부(widow)
 
 사용자 표시 용어는 **"마지막 줄 한 단어 (방지)"** — 고아(orphan)·외톨이 같은 이론 용어 대신
@@ -234,7 +244,7 @@ h1 > h2 > h3 > body가 같은 비율로 이어지면 위계가 명확하고 일�
 | cjk-break-css | 중간 | 제안 (CSS 위치 승인 필요) |
 | measure / line-height / type-scale / letter-spacing | 중간 | 제안 |
 | value-contrast / weight / font-pairing (§9) | 중간 | 제안 |
-| paragraph-rhythm (§10) | 낮음 | 가능 |
-| layout-image-suggest (§11) | 높음 | 제안 (위치만, 자동 삽입 금지) |
+| paragraph-rhythm (§10) | 낮음 | 제안 (css-rule — 사람이 위치 승인) |
+| layout-image (§11) | 높음 | 제안 (위치만, 자동 삽입 금지) |
 | orphan-widow | 중간 | 제안 |
 | spelling | 높음 | 제안 (사람 검토) |
