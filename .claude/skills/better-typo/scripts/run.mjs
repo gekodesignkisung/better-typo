@@ -89,14 +89,28 @@ function discover(args) {
 function main() {
   const argv = process.argv.slice(2);
   const bin = relative(process.cwd(), process.argv[1] || 'run.mjs') || 'run.mjs';
-  const flags = new Set(argv.filter((a) => a.startsWith('--')));
-  const inputs = argv.filter((a) => !a.startsWith('--'));
+  // --auto-apply=<카테고리,...> : 무인 실행용 — 지정 카테고리만 적용, 나머지는 result.json에 남긴다.
+  // (SKILL.md Automation hook과 동일 표기. `--auto-apply cats` 공백 구분도 허용.)
+  let autoCats = null;
+  const argRest = [];
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a.startsWith('--auto-apply')) {
+      const v = a.includes('=') ? a.split('=')[1] : argv[++i] || '';
+      autoCats = v.split(',').map((s) => s.trim()).filter(Boolean);
+      continue;
+    }
+    argRest.push(a);
+  }
+  const flags = new Set(argRest.filter((a) => a.startsWith('--')));
+  const inputs = argRest.filter((a) => !a.startsWith('--'));
   if (!inputs.length) {
     process.stderr.write(
-      `usage: node ${bin} <file|dir...> [--dry|--apply] [--json]\n` +
+      `usage: node ${bin} <file|dir...> [--dry|--apply|--auto-apply <cat,...>] [--json]\n` +
       '  (기본) 검출만 → .better-typo/result.json 저장 + 요약\n' +
       '  --dry    적용 미리보기(파일 불변)\n' +
       '  --apply  저위험 항목 실제 적용\n' +
+      '  --auto-apply <cat,...>  지정 카테고리만 적용 (예: punctuation-hygiene,cjk-line-break)\n' +
       '  --json   result.json을 stdout으로\n',
     );
     process.exit(1);
@@ -145,12 +159,16 @@ function main() {
     }
   }
 
-  if (flags.has('--dry') || flags.has('--apply')) {
-    const dry = !flags.has('--apply');
-    process.stdout.write(`\n${dry ? '── DRY RUN (파일 불변) ──' : '── APPLY (실제 수정) ──'}\n`);
+  if (flags.has('--dry') || flags.has('--apply') || autoCats) {
+    // --dry가 있으면 무조건 미리보기. 없으면 --apply 또는 --auto-apply일 때만 실제 적용.
+    const dry = flags.has('--dry') || (!flags.has('--apply') && !autoCats);
+    const label = dry ? '── DRY RUN (파일 불변) ──'
+      : autoCats ? `── AUTO-APPLY (${autoCats.join(',')}) ──` : '── APPLY (실제 수정) ──';
+    process.stdout.write(`\n${label}\n`);
     const grouped = new Map();
     for (const i of result.issues) {
       if (i.file === '<text>' || i.file === '<page>') continue;
+      if (autoCats && !autoCats.includes(i.category)) continue;  // 지정 카테고리만
       if (!grouped.has(i.file)) grouped.set(i.file, []);
       grouped.get(i.file).push(i);
     }

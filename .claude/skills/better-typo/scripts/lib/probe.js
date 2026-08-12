@@ -39,32 +39,40 @@
   }
 
   // Range로 각 시각적 줄의 마지막 단어 추출 (theory §1: 실제 줄바꿈 위치)
+  // TreeWalker로 요소 안 모든 텍스트 노드를 순서대로 측정 — <strong>·<a> 같은
+  // 인라인 요소가 섞인 문단도 전체 줄을 놓치지 않는다 (studio lastLineCharCount와 동일 방식).
   function visualLines(el) {
-    const node = [...el.childNodes].find((n) => n.nodeType === Node.TEXT_NODE && n.textContent.trim().length);
-    if (!node) return [];
-    const text = node.textContent;
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      if (n.textContent.length) nodes.push(n);
+    }
+    if (!nodes.length) return [];
     const range = document.createRange();
     const lines = [];
-    let lineStart = 0;
+    let buf = '';
     let prevTop = null;
-    for (let i = 1; i <= text.length; i++) {
-      range.setStart(node, i - 1);
-      range.setEnd(node, i);
-      const rect = range.getClientRects()[0];
-      if (!rect) continue;
-      if (prevTop !== null && rect.top - prevTop > 1) {
-        // 줄바꿈 발생: [lineStart, i-1) 가 한 줄
-        pushLine(text, lineStart, i - 1, lines);
-        lineStart = i - 1;
+    for (const node of nodes) {
+      const text = node.textContent;
+      for (let i = 1; i <= text.length; i++) {
+        range.setStart(node, i - 1);
+        range.setEnd(node, i);
+        const rect = range.getClientRects()[0];
+        if (!rect) { buf += text[i - 1]; continue; } // 접힌 공백 등 — 같은 줄로 취급
+        if (prevTop !== null && rect.top - prevTop > 1) {
+          pushLine(buf, lines);
+          buf = '';
+        }
+        prevTop = rect.top;
+        buf += text[i - 1];
       }
-      prevTop = rect.top;
     }
-    pushLine(text, lineStart, text.length, lines);
+    pushLine(buf, lines);
     return lines;
   }
 
-  function pushLine(text, a, b, lines) {
-    const seg = text.slice(a, b).replace(/\s+$/u, '');
+  function pushLine(seg, lines) {
+    seg = seg.replace(/^\s+/u, '').replace(/\s+$/u, '');
     if (!seg) return;
     const words = seg.split(/\s+/u).filter(Boolean);
     lines.push({ text: seg, lastWord: words[words.length - 1] ?? '', charCount: seg.length });

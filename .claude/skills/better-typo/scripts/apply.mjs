@@ -22,13 +22,14 @@ const NBSP = ' ';
 
 export function applyToFile(path, fixes, { dry = false } = {}) {
   let text = readFileSync(path, 'utf8');
-  const spans = segment(text, { fileType: fileTypeOf(path) });
+  const fileType = fileTypeOf(path);
+  const spans = segment(text, { fileType });
   const log = [];
 
   // 적용 가능한 것만 추려서 오프셋 내림차순
   const planned = [];
   for (const fix of fixes) {
-    const r = planFix(text, spans, fix);
+    const r = planFix(text, spans, fix, fileType);
     if (r.skip) {
       log.push({ id: fix.id, status: 'skip', reason: r.reason });
       continue;
@@ -47,7 +48,7 @@ export function applyToFile(path, fixes, { dry = false } = {}) {
   return { path, applied: kept.length, log, text };
 }
 
-function planFix(text, spans, issue) {
+function planFix(text, spans, issue, fileType = 'md') {
   const fix = issue.fix;
   if (!fix) return { skip: true, reason: 'no-fix' };
 
@@ -75,10 +76,14 @@ function planFix(text, spans, issue) {
   if (fix.kind === 'insert-wbr') {
     const at = fix.at;
     if (!isProse(spans, at)) return { skip: true, reason: 'not-prose' };
-    if (text.slice(at, at + 5) === '<wbr>' || text.slice(at - 5, at) === '<wbr>') {
+    // mdx(JSX)는 자기닫힘 <wbr/> (theory §1 프리미티브). 멱등: 앞뒤 어느 형태든 이미 있으면 skip.
+    const tag = fileType === 'mdx' ? '<wbr/>' : '<wbr>';
+    const ahead = text.slice(at, at + 6);
+    const behind = text.slice(Math.max(0, at - 6), at);
+    if (ahead.startsWith('<wbr>') || ahead.startsWith('<wbr/>') || /<wbr\/?>$/u.test(behind)) {
       return { skip: true, reason: 'already-wbr' };
     }
-    return { at, removeEnd: at, insert: '<wbr>' };
+    return { at, removeEnd: at, insert: tag };
   }
 
   return { skip: true, reason: `unknown-kind:${fix.kind}` };

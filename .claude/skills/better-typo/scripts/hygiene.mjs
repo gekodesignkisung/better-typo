@@ -25,6 +25,15 @@ const RULES = [
     re: / +([,.!?;:、。」』）)])/gu,
     fix: (m) => m.trim(),
     message: '문장부호 앞 공백 제거 (theory §7)',
+    // 오탐 가드: 이모티콘(":)" ";(")과 마크다운 표 정렬 행("| :--- |")은 문장부호가 아니다.
+    guard: (text, at, end) => {
+      const punct = text.slice(at, end).trim();
+      if (punct === ':' || punct === ';') {
+        const nx = text[end] || '';
+        if (nx === ')' || nx === '(' || nx === '-') return false;
+      }
+      return true;
+    },
   },
   {
     name: 'trailing-space',
@@ -60,6 +69,16 @@ const RULES = [
     re: /^[a-z](?=[a-z]{3,} [A-Za-z가-힣])/gmu,
     fix: (m) => m.toUpperCase(),
     message: '영문 문장 첫 글자 대문자 (theory §7)',
+    // 오탐 가드: prose 청크가 보호영역(인라인코드·닫는 태그) 경계에서 잘리면 ^(gm)이
+    // 청크 시작을 줄 시작으로 오인한다("`config.json`from" → "From").
+    // 진짜 줄 시작이거나, 바로 앞이 블록 요소의 여는 태그일 때만 문장 시작으로 본다.
+    guard: (text, at) => {
+      if (at === 0) return true;
+      const before = text.slice(0, at);
+      if (/\n\s*$/u.test(before)) return true;
+      const m = before.match(/<([A-Za-z][A-Za-z0-9]*)(?:\s[^>]*)?>\s*$/u);
+      return !!m && /^(p|li|h[1-6]|blockquote|td|th|dt|dd|div|section|article)$/i.test(m[1]);
+    },
   },
   {
     name: 'space-after-punct',

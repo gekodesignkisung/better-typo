@@ -27,8 +27,9 @@ export const NUMBER_UNITS = [
 // 숫자 + 단위 사이 공백을 잡는 정규식 (전역, 멀티라인).
 // 숫자는 천단위 쉼표 포함 다자릿수 허용(`1,000 원`). 단위 뒤에 글자가 붙으면
 // 더 긴 단어의 앞부분일 수 있어(`50 미터법` 등) 경계로 거른다.
+// 개행은 제외([^\S\r\n]) — 줄을 넘어간 숫자|단위를 글루하면 소스의 줄 구조가 바뀐다.
 export const NUMBER_UNIT_RE = new RegExp(
-  `(\\d[\\d,]*)\\s+(${NUMBER_UNITS.map(escapeRe).join('|')})(?![A-Za-z가-힣])`,
+  `(\\d[\\d,]*)[^\\S\\r\\n]+(${NUMBER_UNITS.map(escapeRe).join('|')})(?![A-Za-z가-힣])`,
   'gu',
 );
 
@@ -52,7 +53,7 @@ export function findAtomicSpaces(text) {
   const hits = [];
   for (const m of text.matchAll(NUMBER_UNIT_RE)) {
     const full = m[0];
-    const spaceIdx = m.index + full.indexOf(' '); // 숫자와 단위 사이 공백 위치
+    const spaceIdx = m.index + m[1].length; // 숫자 그룹 바로 뒤 = 첫 공백 위치 (탭 등에도 안전)
     hits.push({ at: spaceIdx, before: full, kind: 'number-unit' });
   }
   for (const phrase of FIXED_PHRASES) {

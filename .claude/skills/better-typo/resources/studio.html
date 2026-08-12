@@ -400,12 +400,14 @@
     const SENT_END_RE = /(습니다|입니다|았다|었다|한다|이다|다|요|죠|까)\s*$/; // 문장 종결어미로 끝나면 본문
     function classify(lines){
       const out = lines.map((raw, i) => {
-        let text = raw, role = 'body';
-        if (/^>\s?/.test(text)) { role = 'quote'; text = text.replace(/^>\s?/, ''); }
-        else if (/^[“"]/.test(text)) role = 'quote';              // 따옴표로 시작하는 발췌 인용 단락
+        // marker: 표시용으로 떼어낸 원문 접두(>, #, ##)를 보존 — '다시 편집' 왕복 시 복원한다.
+        let text = raw, role = 'body', marker = '';
+        if (/^>\s?/.test(text)) { role = 'quote'; marker = text.match(/^>\s?/)[0]; text = text.replace(/^>\s?/, ''); }
+        else if (/^[“"]/.test(text)) role = 'quote';              // 따옴표로 시작하는 발췌 인용 단락 (마커 없음)
         else if (URL_LINE_RE.test(text.trim())) role = 'link';    // URL만 있는 줄 → 링크(소제목 오분류 방지, §7)
         else if (/^#{1,6}\s/.test(text)) {                        // 마크다운 헤딩: # 제목 / ##+ 소제목
           role = (/^#\s/.test(text) && i === 0) ? 'title' : 'heading';
+          marker = text.match(/^#{1,6}\s+/)[0];
           text = text.replace(/^#{1,6}\s+/, '');
         }
         else if (/^(\d+[.):]|[-•*‣·]|[①-⑳])\s*\S/.test(text)) role = 'list';   // 번호·기호 목록 항목
@@ -418,7 +420,7 @@
         else if (i === 0 && text.length <= 80) role = 'title';   // 제목은 짧다 — 긴 첫 줄(줄바꿈 없는 원문 덩어리)은 본문으로
         else if (text.length <= 60 && !HEAD_END_RE.test(text) && !SENT_END_RE.test(text))
           role = (i === 1) ? 'subtitle' : 'heading';               // 둘째 줄이면 부제, 본문 중간이면 섹션 소제목
-        return { role, text };
+        return { role, text, marker };
       });
       // 표제부 관례(제목–부제–바이라인): 제목 다음 줄이 문장이라 본문 판정을 받았어도
       // 바로 뒤에 바이라인(캡션)이 오면 그 줄은 부제(deck)다.
@@ -710,7 +712,7 @@
         // 링크 줄: URL을 실제 <a>로 렌더한다(검출·수정 대상 아님). URL 텍스트는 그대로 보존.
         if (b.role === 'link') {
           const url = b.text.trim();
-          html += `<div class="blk" data-role="link" id="blk${bi}"><a href="${esc(url)}" target="_blank" rel="noopener">${esc(url)}</a></div>`;
+          html += `<div class="blk" data-role="link" data-marker="" id="blk${bi}"><a href="${esc(url)}" target="_blank" rel="noopener">${esc(url)}</a></div>`;
           return;
         }
         const issues = detect(b.text);
@@ -724,7 +726,7 @@
           cur = m.end;
         }
         inner += esc(b.text.slice(cur));
-        html += `<div class="blk" data-role="${b.role}" id="blk${bi}">${inlineMd(inner)}</div>`;
+        html += `<div class="blk" data-role="${b.role}" data-marker="${esc(b.marker || '')}" id="blk${bi}">${inlineMd(inner)}</div>`;
       });
 
       paper.setAttribute('contenteditable', 'false');
@@ -1136,9 +1138,10 @@
     }
     function editMode(){
       running = false; mode = 'edit'; refreshGo();
+      // 원문 접두 마커(>, #, ##)를 복원 — 마커 없이 판별된 역할(따옴표 인용 등)은 그대로.
       const lines = Array.from(paper.querySelectorAll('.blk')).map(b => {
-        const role = b.getAttribute('data-role'); const t = b.textContent;
-        return role === 'quote' ? '> ' + t : t;
+        const mk = b.getAttribute('data-marker') || '';
+        return mk + b.textContent;
       });
       paper.innerHTML = lines.length ? lines.map(l => `<div>${esc(l)}</div>`).join('') : '';
       paper.setAttribute('contenteditable', 'true');
