@@ -84,7 +84,7 @@ better-typo/
 
 **바로 열기 (GitHub Pages)** — 설치 없이 브라우저에서:
 
-> **https://gekodesignkisung.github.io/better-typo/**
+> **https://corca-ai.github.io/better-typo/**
 
 (루트 `index.html`은 `resources/studio.html`로 리다이렉트만 한다 — 단일 사본 원칙.
 `main`에 푸시하면 배포본도 자동 갱신된다.)
