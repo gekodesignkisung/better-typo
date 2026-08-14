@@ -68,6 +68,16 @@ CSS(§1 keep-all·§3 폭·§4 행간·§5 스케일·§6 자간)가 모두 확�
 제어: 본문 컨테이너에 `max-width`를 `ch` 또는 `rem`으로. 한글은 `max-width: 40ch` 부근.
 (`ch`는 '0' 글자폭 기준이라 한글에선 실제보다 좁게 잡힌다 — 측정은 한글 글자폭 프로브로 보정.)
 
+**측정 방식 (Canvas, DOM reflow 없이)**: 줄바꿈·글줄 길이 측정은 `getBoundingClientRect`나
+글자별 `Range.getClientRects` 대신 **Canvas `measureText`**로 한다 — 브라우저 폰트 엔진에 바로
+물어봐 레이아웃 reflow가 없다(빠르고, 반복 측정에 안전). 알고리즘은 `chenglou/pretext`(순수 JS
+텍스트 측정 라이브러리)를 따른다: ① `Intl.Segmenter(word)`로 어절 분리 ② **왼쪽-접착 구두점
+(`.` `,` `」` `%` 등)을 앞 단어에 병합**해 측정 — 커닝이 반영되고 줄 끝에 구두점만 홀로 떨어지는
+것을 막는다(pretext RESEARCH.md의 "merge punctuation into the preceding word") ③ `keep-all`은
+CJK 포함 연속 run을 하나로 병합해 재현 ④ 폭을 누적하다 초과하면 마지막 공백(break 기회)으로
+되돌아가 끊는 last-break-opportunity 루프. 구현: `scripts/lib/text-measure.js`(스킬)·`probe.js`,
+studio가 같은 로직을 공유한다(단일 기준). 실측 대비 줄 수 정확도 ≈95%.
+
 ---
 
 ## 4. 행간 (line-height)

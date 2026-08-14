@@ -6,6 +6,11 @@ Claude Code와 OpenAI Codex 등 범용 에이전트가 같은 코어(스크립�
 > 진단 리포트가 아니라, 실제로 문서를 고친다. 특히 한글 본문에서 같은 글의 인상을 좌우하는
 > **줄내림(줄바꿈) 위치** 같은 미세하고 디테일한 부분을 다듬는다.
 
+- **빌드 타임 교정** — 파일을 실제로 고친다(제안 → 승인 → 적용). 새 글도, 기존 페이지도.
+- **런타임 자동보정** — 페이지에 스크립트를 심으면 **모든 화면 폭에서** 줄내림·고아가 유지된다.
+- **눈으로 보는 스튜디오** — 다듬는 과정을 브라우저에서 단계별로 재생한다.
+- **에이전트 중립** — Claude Code · OpenAI Codex · CLI 어디서든 같은 코어로 동작한다.
+
 ## 왜 만드는가
 
 웹페이지의 문서 퀄리티는 아주 미세한 부분에서 결정된다. 한글/CJK는 영어와 달리 단어 경계 개념이
@@ -30,8 +35,14 @@ discover → segment → (render/probe) → detect → propose → DIFF → appr
 
 | | 담당 |
 |---|---|
-| prose/protected 분리, 문장부호 정규화, measure·행간 산술, 멱등 적용 | **스크립트** (결정적) |
+| prose/protected 분리, 문장부호 정규화, Canvas 텍스트 측정·줄바꿈, 멱등 적용 | **스크립트** (결정적) |
 | 의미 단위 줄내림 판단, 고아/과부, 한글 맞춤법, 위계 결정 | **LLM 에이전트** (판단) |
+
+**측정은 reflow 없이.** 줄바꿈·글줄 길이 측정은 `getBoundingClientRect`·글자별 `Range`(레이아웃
+reflow를 유발) 대신 **Canvas `measureText`** 로 한다 — `Intl.Segmenter`+왼쪽-접착 구두점 병합+
+keep-all CJK run 병합+last-break 줄바꿈. 알고리즘은 [`chenglou/pretext`](https://github.com/chenglou/pretext)
+(순수 JS 텍스트 측정 라이브러리)를 참고했고, 코어(`scripts/lib/text-measure.js`)를 스크립트·스튜디오·
+런타임 스크립트가 공유한다. 실측 대비 줄 수 정확도 ≈95%.
 
 ## 설치 · 사용 (에이전트별)
 
@@ -69,12 +80,14 @@ better-typo/
     │   ├── hygiene.mjs         # 문장부호·공백 정규화
     │   ├── apply.mjs           # 승인된 제안 멱등 적용
     │   └── lib/
-    │       ├── issues.mjs      # TypoIssue 팩토리·정렬·IO
-    │       ├── probe.js        # Playwright 인페이지 줄바꿈 측정 문자열
-    │       └── unit-rules.mjs  # 조사·숫자+단위·고유명사 원자 단위
+    │       ├── issues.mjs        # TypoIssue 팩토리·정렬·IO
+    │       ├── text-measure.js   # Canvas 텍스트 측정·줄바꿈 (pretext 방식, reflow 없이)
+    │       ├── probe.js          # 인페이지 측정 — text-measure 로직 사용
+    │       └── unit-rules.mjs    # 조사·숫자+단위·고유명사 원자 단위
     └── resources/
         ├── theory.md           # 이론·임계값 단일 진실 소스
         ├── studio.html         # 호출 시 여는 인터랙티브 스튜디오
+        ├── better-typo.js      # 런타임 자동보정 — 페이지에 심으면 모든 화면 폭에서 유지
         └── sample.html         # before/after 검증 픽스처
 ```
 
@@ -111,11 +124,34 @@ python -m http.server 8799      # 또는: npx --yes serve -l 8799 .
 스튜디오는 **시각적 탐색용**이며, 실제 파일 변형은 항상 `apply.mjs` 파이프라인(propose → DIFF →
 approve)을 거친다.
 
+## 런타임 자동보정 (모든 화면 폭에서 유지)
+
+빌드 타임 교정은 **한 폭에서만** 맞다. 실제 독자는 화면 폭·폰트·확대율이 제각각이라, 좁은 폰에서는
+줄바꿈이 달라져 고아·글루가 다시 어긋난다. **반응형 페이지**라면 `resources/better-typo.js`를
+페이지에 심어 이를 런타임에 해결한다 — 로드·리사이즈 때마다 그 화면의 실제 폭으로 Canvas 재측정해
+숫자+단위 glue(§1)와 마지막 줄 한 단어(§2)를 실시간 보정한다.
+
+```html
+<script src="better-typo.js" defer></script>   <!-- article/main/.prose 안 본문을 자동 보정 -->
+```
+
+삽입하는 건 nbsp뿐이라 원문 글자는 바뀌지 않고, 코드·URL·`contenteditable`은 건드리지 않는다.
+매 실행 전 자신이 넣은 nbsp만 되돌려 다시 계산하므로 리사이즈 왕복에도 멱등하다. 측정이 Canvas
+`measureText` 기반이라 레이아웃 reflow가 없다(theory §3). 정적(비반응형) 문서면 불필요하다.
+
 ## 이론
 
 모든 임계값과 규칙은 [theory.md](.claude/skills/better-typo/resources/theory.md)에 문서화된 **단일
 진실 소스**다(§1 줄내림 ~ §11 레이아웃, §12 AI 글 흔적 보정). 스크립트·LLM·스튜디오가 모두 동일한
 숫자·단위 집합·오타 사전을 인용한다.
+
+## 크레딧
+
+- 텍스트 측정·줄바꿈 알고리즘(Canvas `measureText`, `Intl.Segmenter`, 구두점 병합, keep-all)은
+  [chenglou/pretext](https://github.com/chenglou/pretext) — 순수 JS 텍스트 측정·레이아웃 라이브러리 —
+  를 참고해 이식했다.
+- 규범·조판 기준: 국립국어원 한글 맞춤법, Robert Bringhurst *The Elements of Typographic Style*,
+  W3C 한국어 조판 요구사항(KLREQ).
 
 ## 라이선스
 

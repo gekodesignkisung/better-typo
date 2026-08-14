@@ -57,6 +57,7 @@ prose/protected 스팬을 얻는다. **protected(코드·인라인코드·URL·�
 - `mcp__playwright__browser_navigate` 로 URL / dev-server / `file://<절대경로>` 열기
 - `mcp__playwright__browser_evaluate` 에 `scripts/lib/probe.js` 본문을 `function`으로 전달
 - 반환: 요소별 computed style + `measuredCh`(한글 글자폭 보정) + `lines[]`(각 시각적 줄의 `lastWord`)
+- **측정은 Canvas `measureText` 기반**(theory §3) — `getBoundingClientRect`·글자별 `Range`의 레이아웃 reflow 없이 잰다. `Intl.Segmenter`+왼쪽-접착 구두점 병합+keep-all CJK run 병합+last-break 줄바꿈(`chenglou/pretext` 방식). 코어 로직은 `scripts/lib/text-measure.js`가 단일 기준. 실측 대비 줄 수 ≈95%.
 - Playwright 불가 시: 정적 폴백 — `cjk-break-css`(keep-all 누락)와 숫자+단위 glue만, 고아 탐지는 생략.
 
 ### 4. Detect
@@ -95,6 +96,20 @@ node scripts/apply.mjs .better-typo/result.json --dry               # 미리보�
 
 ### 8. Re-verify
 3번 프로브를 다시 돌려 `lines[].lastWord` before/after를 비교한다. 줄 끝 분리 해소·고아 해소·measure/행간 개선을 **측정으로** 확인.
+
+### 9. (선택) 런타임 자동보정 안내 — 모든 화면 폭에서 유지
+위 교정은 **한 폭에서만** 맞다. 실제 독자는 화면 폭·폰트·확대율이 제각각이라, 좁은 폰에서는
+줄바꿈이 달라져 고아·글루가 그 화면에서 다시 어긋난다. **반응형 페이지**를 다룰 때는 사용자에게
+`resources/better-typo.js`(런타임 스크립트)를 **페이지에 넣도록 안내**한다 — 로드·리사이즈 때마다
+그 화면의 실제 폭으로 Canvas 재측정해 §1(숫자+단위 glue)·§2(마지막 줄 한 단어)를 실시간 보정한다.
+
+```html
+<script src="better-typo.js" defer></script>   <!-- article/main/.prose 안 본문을 자동 보정 -->
+```
+- 대상 변경: `<script>window.BETTER_TYPO_ROOT = '.article-body';</script>` 를 먼저 둔다.
+- 안전: 코드·URL·contenteditable은 안 건드리고, 삽입하는 건 nbsp뿐(원문 글자 불변). 리사이즈 왕복에도 멱등.
+- 측정은 Canvas라 reflow 없음(theory §3). **자동 삽입하지 말고** — 파일을 어디에 둘지·`<script>`를 어디 넣을지는 사람이 정하도록 diff/안내로만 제안한다.
+- 정적(비반응형) 문서면 이 단계는 불필요 — 8번까지의 빌드 타임 교정으로 충분하다.
 
 ## How to detect bad Korean line breaks (핵심)
 probe가 각 시각적 줄의 마지막 단어를 준다. 다음이면 나쁜 줄내림:

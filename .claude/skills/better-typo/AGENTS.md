@@ -64,6 +64,9 @@ node .claude/skills/better-typo/scripts/apply.mjs .better-typo/result.json --dry
 ### 8. Re-verify
 probe를 다시 돌려(가능 환경) before/after 비교. 줄 끝 분리·마지막 줄 한 단어 해소, measure/행간 개선을 측정으로 확인. 정적 환경이면 `run.mjs`로 hygiene 재검출이 **0건이 될 때까지 재적용** — 겹친 교정은 한 실행에 하나만 적용되고 나머지는 다음 실행에서 수렴한다(멱등).
 
+### 9. (선택) 런타임 자동보정 안내
+빌드 타임 교정은 한 폭에서만 맞다. **반응형 페이지**를 다룰 때는 `resources/better-typo.js`를 페이지에 넣도록 사용자에게 안내한다 — 로드·리사이즈 때 그 화면 폭으로 Canvas 재측정해 §1 glue·§2 마지막 줄 한 단어를 실시간 보정(nbsp만 삽입, 원문 불변, 멱등). `<script src="better-typo.js" defer></script>`. 자동 삽입하지 말고 위치는 사람이 정하도록 제안만. 정적 문서면 불필요.
+
 ## fix 형식
 `makeIssue({ category, severity, file, message, fix?, evidence? })`
 - category: `cjk-line-break` `orphan-widow` `measure` `line-height` `type-scale` `letter-spacing` `value-contrast` `font-pairing` `paragraph-rhythm` `layout-image` `punctuation-hygiene` `cjk-break-css` `spelling`

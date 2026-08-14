@@ -681,32 +681,54 @@
     }
     function hideSel(){ if (selbox) selbox.classList.remove('show'); }
 
+    // ── Canvas 텍스트 측정 (DOM reflow 없이) — chenglou/pretext 방식.
+    // Intl.Segmenter + 왼쪽-접착 구두점 병합 + keep-all CJK run 병합 + last-break 줄바꿈.
+    // scripts/lib/text-measure.js(스킬)와 같은 알고리즘 — 단일 기준.
+    const _mctx = (typeof OffscreenCanvas !== 'undefined')
+      ? new OffscreenCanvas(1, 1).getContext('2d') : document.createElement('canvas').getContext('2d');
+    const _mcache = new Map();
+    function _w(seg, font){ const k=font+' '+seg; let w=_mcache.get(k); if(w===undefined){ _mctx.font=font; w=_mctx.measureText(seg).width; _mcache.set(k,w);} return w; }
+    let _mseg = null;
+    const _LEFT_STICKY = new Set(['.',',','!','?',':',';',')',']','}','%','"','”','’','»','›','…','。','、','）','］','」','』']);
+    const _DASH = new Set(['-','‐','–','—']);
+    function _isCJKcp(cp){ return (cp>=0x3000&&cp<=0x303f)||(cp>=0x3040&&cp<=0x30ff)||(cp>=0x3130&&cp<=0x318f)||(cp>=0x3400&&cp<=0x4dbf)||(cp>=0x4e00&&cp<=0x9fff)||(cp>=0xac00&&cp<=0xd7af)||(cp>=0xf900&&cp<=0xfaff)||(cp>=0xff00&&cp<=0xffef); }
+    function _isCJK(s){ for(let i=0;i<s.length;i++){const c=s.charCodeAt(i); if(c<0x3000)continue; if(_isCJKcp(c))return true;} return false; }
+    function _segment(text, keepAll){
+      const norm=text.replace(/[ \t\n\r\f]+/g,' ').replace(/^ | $/g,''); if(!norm)return [];
+      if(!_mseg) _mseg=new Intl.Segmenter(undefined,{granularity:'word'});
+      const raw=[]; for(const s of _mseg.segment(norm)){const t=s.segment; raw.push({text:t,space:/^\s+$/.test(t),word:!!s.isWordLike,cjk:_isCJK(t)});}
+      const merged=[]; for(const seg of raw){const p=merged[merged.length-1]; if(!seg.space&&!seg.word&&p&&!p.space&&[...seg.text].every(c=>_LEFT_STICKY.has(c))){p.text+=seg.text;p.cjk=p.cjk||seg.cjk;continue;} merged.push({...seg});}
+      if(!keepAll) return merged;
+      const out=[]; let g=null; const flush=()=>{if(!g)return; if(g.cjk)out.push({text:g.text,space:false}); else for(const s of g.parts)out.push(s); g=null;};
+      for(const seg of merged){ if(!seg.space){ if(g&&_DASH.has(g.text[g.text.length-1]))flush(); if(!g)g={text:'',cjk:false,parts:[]}; g.text+=seg.text; g.cjk=g.cjk||seg.cjk; g.parts.push(seg);} else {flush(); out.push(seg);} }
+      flush(); return out;
+    }
+    // 텍스트를 줄 단위로: [{text, charCount}]
+    function measureTextLines(text, font, maxWidth, keepAll){
+      const segs=_segment(text, keepAll); const fit=maxWidth+0.005; const lines=[];
+      let cur='', lineW=0, brk=-1;
+      const push=(t)=>{const s=t.replace(/\s+$/u,''); if(s)lines.push({text:s, charCount:s.replace(/\s/g,'').length});};
+      for(let i=0;i<segs.length;i++){ const seg=segs[i]; if(cur===''&&seg.space)continue; const w=_w(seg.text,font);
+        if(cur!==''&&lineW+w>fit){ if(brk>=0){ push(cur.slice(0,brk)); cur=cur.slice(brk).replace(/^\s+/u,''); lineW=cur?_w(cur,font):0; brk=-1; i--; continue;} push(cur); cur=''; lineW=0; brk=-1; i--; continue; }
+        cur+=seg.text; lineW+=w; if(seg.space)brk=cur.length; }
+      push(cur); return lines;
+    }
+
     // 고아 교정 (theory §2) — 본문 단락의 마지막 시각적 줄이 ≤4자면
     // 직전 어절 사이 공백을 nbsp로 바꿔 한 단어를 함께 끌어내린다. 해소한 단락 수 반환.
+    // Canvas 측정으로 마지막 줄 글자 수를 구한다 — 글자별 Range(reflow) 없이 (pretext 방식).
     function lastLineCharCount(el){
-      // el 안의 모든 텍스트노드를 순서대로 모아(글루로 생긴 fixspan 등 자식이 섞여도)
-      // 글자별 top을 측정, 마지막 시각적 줄의 글자 수를 센다.
-      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-      const nodes = [];
-      for (let n = walker.nextNode(); n; n = walker.nextNode()) {
-        if (n.textContent.length) nodes.push(n);
-      }
-      if (!nodes.length) return null;
-      const range = document.createRange();
-      let lastTop = null, lastLineChars = 0, total = 0;
-      for (const node of nodes) {
-        const text = node.textContent;
-        for (let i = 1; i <= text.length; i++) {
-          range.setStart(node, i - 1); range.setEnd(node, i);
-          const rect = range.getClientRects()[0];
-          if (!rect) continue;
-          if (lastTop !== null && rect.top - lastTop > 1) lastLineChars = 0; // 새 줄 시작
-          lastTop = rect.top;
-          if (!/\s/.test(text[i - 1])) lastLineChars++; // 줄 끝 공백은 안 셈
-          total++;
-        }
-      }
-      return total ? lastLineChars : null;
+      const text = el.textContent || '';
+      if (!text.trim()) return null;
+      const st = getComputedStyle(el);
+      const font = st.font && st.font !== '' ? st.font
+        : `${st.fontStyle} ${st.fontWeight} ${st.fontSize}/${st.lineHeight} ${st.fontFamily}`;
+      const contentWidth = el.clientWidth
+        - (parseFloat(st.paddingLeft) || 0) - (parseFloat(st.paddingRight) || 0);
+      if (contentWidth <= 0) return null;
+      const lines = measureTextLines(text, font, contentWidth, st.wordBreak === 'keep-all');
+      if (!lines.length) return null;
+      return lines[lines.length - 1].charCount;
     }
     // 마지막 공백을 nbsp(U+00A0)로 바꿔 직전 어절을 함께 내려보낸다.
     // innerHTML 문자열이 아니라 **텍스트 노드**에서 찾는다 — 앞 단계(맞춤법·정리)가 남긴
