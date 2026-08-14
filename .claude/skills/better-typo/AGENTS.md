@@ -45,7 +45,8 @@ protected 스팬은 이후 어떤 변형도 금지. 모든 수정은 prose 스�
 - **결정적(스크립트)**: `node .claude/skills/better-typo/scripts/hygiene.mjs <file>` (문장부호/공백 — 괄호는 교정하지 않음: 여는 괄호는 앞말에 붙임(국립국어원), 닫는 괄호 뒤는 §8 문맥 판단), `findAtomicSpaces()`(`scripts/lib/unit-rules.mjs`, 숫자+단위 glue). probe가 있으면 `evaluateMeasurements()`(`scripts/measure.mjs`)로 measure/line-height/type-scale/letter-spacing.
 - **판단(에이전트)**: theory 참조로 아래를 만든다.
   - `cjk-line-break`: probe `lines[].lastWord`를 보고 줄 끝 어절/의미 단위가 부자연스럽게 끊겼으면 glue 공백의 **소스 오프셋**을 골라 `insert-nbsp` fix.
-  - `orphan-widow`: 마지막 줄 글자수 ≤4(§2)면 직전 공백을 nbsp로. 사용자에겐 "마지막 줄 한 단어"로 표현(고아/orphan은 이론 용어).
+  - `orphan-widow`: 마지막 줄 글자수 ≤4(§2)면 직전 공백을 nbsp로. 사용자에겐 "마지막 줄 한 단어"로 표현(고아/orphan은 이론 용어). 본문에 `text-wrap: pretty`가 적용·지원되면 이 nbsp는 보류(§13-1 중복 회피).
+  - `css-text-modern`(§13): 최신 CSS Text 기능을 `css-rule`로 제안. §13-1 채택 — 본문 `text-wrap: pretty`, 제목 `text-wrap: balance`(Baseline Newly Available, 폴백 안전). §13-2 진보적 향상 — `text-spacing-trim`·`text-box-trim`+`text-box-edge`·`text-autospace`·`hanging-punctuation`(Safari 한정)은 **`@supports`로 감싸** 제안하고 미지원 폴백을 근거에 명기. 자동 삽입 금지.
   - `hierarchy`(§5·§6·§9): §5 판별표(제목·부제·소제목·본문·목록·참고 목록·인용·캡션)로 역할 분류 → type-scale·웨이트·명도 램프 제안. **단일 폰트가 기본**, 폰트 페어링은 선택.
   - `paragraph-rhythm`(§10), `layout-image`(§11), `spelling`(§8, 오타 사전·의존명사 '수'·문맥 띄어쓰기 — 미래 날짜 등 사실 의심은 *질문*으로), `cjk-break-css`.
 
@@ -69,7 +70,7 @@ probe를 다시 돌려(가능 환경) before/after 비교. 줄 끝 분리·마�
 
 ## fix 형식
 `makeIssue({ category, severity, file, message, fix?, evidence? })`
-- category: `cjk-line-break` `orphan-widow` `measure` `line-height` `type-scale` `letter-spacing` `value-contrast` `font-pairing` `paragraph-rhythm` `layout-image` `punctuation-hygiene` `cjk-break-css` `spelling`
+- category: `cjk-line-break` `orphan-widow` `measure` `line-height` `type-scale` `letter-spacing` `value-contrast` `font-pairing` `paragraph-rhythm` `layout-image` `punctuation-hygiene` `cjk-break-css` `css-text-modern` `spelling`
 - fix.kind: `text-replace`(range) | `insert-nbsp`(at) | `insert-wbr`(at) | `css-rule`(cssTarget)
 - 파일 타입별 프리미티브: `.md`/`.html`은 `&nbsp;`(U+00A0)·`<wbr>`; `.mdx` JSX는 `{" "}`·`<wbr/>`(속성 안 금지).
 

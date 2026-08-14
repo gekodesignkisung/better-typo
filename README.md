@@ -142,8 +142,15 @@ approve)을 거친다.
 ## 이론
 
 모든 임계값과 규칙은 [theory.md](.claude/skills/better-typo/resources/theory.md)에 문서화된 **단일
-진실 소스**다(§1 줄내림 ~ §11 레이아웃, §12 AI 글 흔적 보정). 스크립트·LLM·스튜디오가 모두 동일한
-숫자·단위 집합·오타 사전을 인용한다.
+진실 소스**다(§1 줄내림 ~ §11 레이아웃, §12 AI 글 흔적 보정, §13 최신 CSS Text 기능). 스크립트·LLM·
+스튜디오가 모두 동일한 숫자·단위 집합·오타 사전을 인용한다.
+
+**최신 CSS Text 기능 (§13, 2026-08 Baseline 기준)**: nbsp 삽입이 한 폭에서만 맞는 것과 달리,
+`text-wrap: pretty`(본문 마지막 줄 한 단어 자동 축소)·`balance`(제목 줄 균형)는 **모든 화면 폭에서**
+브라우저가 다듬는다 — Baseline Newly Available(2024-10)이라 바로 채택하고, 미지원(예: Firefox의
+pretty)은 안전 폴백된다. 아직 비-Baseline인 `text-spacing-trim`(CJK 구두점 커닝)·`text-box-trim`
+(폰트 독립적 세로 리듬)·`text-autospace`·`hanging-punctuation`은 `@supports`로 감싸 진보적 향상으로만
+제안한다. 전부 `css-rule`이라 자동 삽입하지 않고 사람이 위치를 승인한다.
 
 ## 크레딧
 

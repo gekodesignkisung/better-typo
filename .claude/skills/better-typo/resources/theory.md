@@ -268,6 +268,75 @@ LLM이 쓴 글에는 사람 글과 다른 미묘한 형태 습관이 있다. 여
 
 ---
 
+## 13. 최신 CSS Text 기능 (2026-08 Baseline 기준)
+
+지금까지의 줄바꿈 교정(§1 glue·§2 마지막 줄 한 단어)은 **스크립트가 `&nbsp;`를 삽입해 한 폭에서
+흉내내는 방식**이다. 최신 CSS Text/Typography 속성은 **브라우저가 모든 폭에서** 같은 일을 하게
+하므로, 지원되면 CSS에 1차로 위임하고 nbsp 삽입은 **미지원·잔여 폴백**으로 내린다.
+
+**역할 재정의 (핵심)**: CSS(전 폭 대응)가 1차, nbsp 삽입(§1·§2, 스크립트·런타임)은 폴백.
+지원 브라우저에서는 CSS가 처리하므로 **같은 지점에 nbsp를 중복 적용하지 않는다**(아래 중복 회피).
+
+### 13-1. 지금 채택 — Baseline Newly Available (2024-10~)
+
+| 속성 | 값 | 대상 | 대체/보완하는 규칙 |
+|---|---|---|---|
+| `text-wrap` | `pretty` | 본문(p·li) | §2 마지막 줄 한 단어 — 고아를 브라우저가 자동 축소 |
+| `text-wrap` | `balance` | 제목·부제(h1~h3, ≤6줄) | 제목 줄 길이 균등 — 위계(§5·§6) 강화 |
+
+```css
+/* 본문 */
+p, li { text-wrap: pretty; }
+/* 제목 — 짧은 다줄 제목의 균형 (6줄 이하에서만 동작) */
+h1, h2, h3 { text-wrap: balance; }
+```
+
+- **효과**: `pretty`는 단락 마지막 줄에 한 단어만 남는 것을 브라우저가 줄인다 → §2 교정의 1차를
+  CSS로 위임. `balance`는 여러 줄 제목의 줄 길이를 고르게 맞춘다.
+- **폴백**: Firefox는 `pretty` 미지원(2026 기준) → 미지원 시 기본 줄바꿈으로 **깨짐 없이 폴백**한다.
+  따라서 `pretty`는 진보적 향상(progressive enhancement)이고, **Firefox·CJK 잔여분은 런타임
+  스크립트(§2 nbsp)가 폴백으로 처리**한다 — 이 이중 구조가 정당한 이유다.
+- **중복 회피**: 본문에 `text-wrap: pretty`가 적용돼 있으면(그리고 대상이 그 CSS를 실제로 받는
+  브라우저면) §2 orphan nbsp 제안을 **보류**한다 — 둘 다 걸면 좁은 폭에서 과교정된다. 확신이
+  없으면(정적 폴백·구형 지원 불명) nbsp를 유지해 안전을 택한다.
+
+### 13-2. 진보적 향상 — 아직 비-Baseline (2026-08, `@supports`로 감쌀 것)
+
+지원이 넓지 않으므로 **필수 의존 금지**. 반드시 `@supports`로 감싸 제안하고, 미지원 폴백은
+현행(§1·§4·§7) 그대로 둔다.
+
+| 속성 | 효과 | 2026-08 지원 | 반영 규칙 |
+|---|---|---|---|
+| `text-spacing-trim: trim-start`(또는 `normal`) | CJK 전각 구두점(`。「」（）`) 내부 여백 자동 커닝 | Chromium 선행, 비-Baseline | §7 문장부호 — CSS 제안 |
+| `text-autospace: normal` | CJK↔라틴/숫자 사이 간격 자동 삽입 | 실험적, 비-Baseline | §1 혼합 문서 — **§1 glue와 조율 필요** |
+| `text-box-trim` + `text-box-edge` | 폰트 독립적 상하 여백(half-leading) 잘라 세로 리듬 정밀화 | Limited(비-Baseline) | §10 단락 리듬·§6 위계 — 제목/본문 광학 정렬 |
+| `hanging-punctuation: first last` | 첫/끝 구두점을 글줄 밖으로 걸어 광학 정렬 | **Safari 한정**(호환성 낮음) | §7 — "Safari 한정" 명시, 강제 안 함 |
+
+```css
+@supports (text-spacing-trim: trim-start) {
+  :root { text-spacing-trim: trim-start; }   /* CJK 구두점 커닝 */
+}
+@supports (text-box-trim: trim-both) {
+  h1, h2, h3 { text-box: trim-both cap alphabetic; }  /* 제목 상하 여백 정리 */
+}
+```
+
+- **`text-autospace` ↔ §1 glue 조율**: 둘 다 CJK↔숫자 경계를 다룬다. `text-autospace`는 *간격을
+  넣고*, §1 glue는 *줄바꿈을 막는다* — 목적이 달라 공존 가능하지만, 혼합 문서에서 자동 간격을
+  켤 때는 §1이 넣은 nbsp가 이중 간격을 만들지 않는지 확인한다(자동 간격 채택 시 순수 공백 유지).
+- **`hanging-punctuation`**: Safari에서만 의미 있는 효과. 제안은 하되 "Safari 한정, 미지원 시 무효
+  (레이아웃 안 깨짐)"를 근거에 적고 자동 적용하지 않는다.
+
+### 13-3. Baseline 게이트 원칙
+
+- **Newly Available 이상**(13-1)은 폴백만 확인하고 채택한다.
+- **비-Baseline**(13-2)은 반드시 `@supports (속성: 값)`로 감싸 제안하고, 미지원 경로의 동작(현행
+  유지)을 diff 근거에 함께 적는다.
+- 모든 CSS 신기능은 `css-rule` 카테고리로, **자동 삽입하지 않고** 대상 파일·셀렉터를 제안해 사람이
+  승인·배치한다(§7 hygiene의 결정적 텍스트 교정과 구분).
+
+---
+
 ## 적용 정책 요약
 
 | 카테고리 | 위험도 | 무인 자동적용 가능 여부 |
@@ -281,5 +350,7 @@ LLM이 쓴 글에는 사람 글과 다른 미묘한 형태 습관이 있다. 여
 | layout-image (§11) | 높음 | 제안 (위치만, 자동 삽입 금지) |
 | ai-tell (§12, 기호: 엠대시·화살표·이모지) | 낮음 | 가능 |
 | ai-tell (§12, 문체: 상투어·필러) | 높음 | 제안 (사람 검토, 강제 안 함) |
-| orphan-widow | 중간 | 제안 |
+| orphan-widow | 중간 | 제안 (§13-1 text-wrap: pretty 적용 시 보류) |
+| css-text-modern (§13-1, text-wrap pretty/balance) | 낮음 | 제안 (css-rule — 사람이 위치 승인) |
+| css-text-modern (§13-2, spacing-trim·text-box·autospace·hanging) | 중간 | 제안 (@supports로 감싸 제안, 강제 안 함) |
 | spelling | 높음 | 제안 (사람 검토) |

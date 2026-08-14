@@ -100,6 +100,23 @@
     .paper.doc-latin.fix-leading .blk[data-role="body"], .paper.doc-latin.fix-leading .blk[data-role="caption"] { line-height: 1.6; }
     .paper.fix-leading .blk[data-role="quote"] { line-height: 1.7; }
     .paper.fix-rhythm .blk[data-role="body"] { margin-bottom: 1.35em; }   /* 단락 세로 리듬 (§10) */
+    /* 최신 CSS Text (§13) — 브라우저가 모든 폭에서 줄바꿈/여백을 다듬는다.
+       §13-1: 본문 text-wrap: pretty(마지막 줄 한 단어 자동 축소), 제목 balance(줄 길이 균등).
+       미지원 브라우저(예: Firefox의 pretty)는 기본 줄바꿈으로 안전 폴백. */
+    .paper.fix-textwrap .blk[data-role="body"],
+    .paper.fix-textwrap .blk[data-role="list"],
+    .paper.fix-textwrap .blk[data-role="ref"]   { text-wrap: pretty; }
+    .paper.fix-textwrap .blk[data-role="title"],
+    .paper.fix-textwrap .blk[data-role="subtitle"],
+    .paper.fix-textwrap .blk[data-role="heading"] { text-wrap: balance; }
+    /* §13-2(진보적 향상): 지원 브라우저에서만. CJK 구두점 커닝 + 제목 상하 여백 정리. */
+    @supports (text-spacing-trim: trim-start) {
+      .paper.fix-textwrap .post { text-spacing-trim: trim-start; }
+    }
+    @supports (text-box-trim: trim-both) {
+      .paper.fix-textwrap .blk[data-role="title"],
+      .paper.fix-textwrap .blk[data-role="heading"] { text-box: trim-both cap alphabetic; }
+    }
 
     /* 위계: 크기(§5) + 웨이트 + 명도(§9) + 폰트 페어링(§9)
        크기는 clamp()로 유체(fluid) 스케일 — 폭이 줄면 폰트도 부드럽게 작아진다.
@@ -848,7 +865,7 @@
       });
 
       paper.setAttribute('contenteditable', 'false');
-      paper.classList.remove('fix-keepall','fix-measure','fix-leading','fix-rhythm');
+      paper.classList.remove('fix-keepall','fix-measure','fix-leading','fix-rhythm','fix-textwrap');
       paper.classList.toggle('doc-latin', latinDoc);
       paper.innerHTML = `<div class="post" id="post">${html}</div>`;
       selbox = null;
@@ -1003,6 +1020,12 @@
           const fixed = fixOrphans();
           selectEl(bodyEl(), fixed ? `한 단어 줄 ${fixed}곳 해소` : '해당 문단 없음');
         } });
+      // 최신 CSS Text (§13) — 브라우저가 모든 폭에서 줄바꿈/여백을 다듬게 위임한다.
+      // nbsp 삽입(한 폭)과 달리, text-wrap: pretty/balance는 지원 브라우저에서 어떤 폭에서도 동작한다.
+      steps.push({ phase:'가독성', tag:'css-text-modern', title:'최신 CSS로 마감',
+        reason:'앞의 묶기·마지막 줄 방지는 이 폭에서만 맞습니다. text-wrap: pretty(본문)·balance(제목)를 얹으면 브라우저가 모든 화면 폭에서 마지막 줄 한 단어와 제목 줄 균형을 스스로 다듬습니다. 지원 브라우저에선 CJK 구두점 커닝(text-spacing-trim)과 제목 상하 여백(text-box-trim)까지 정리됩니다. 미지원 브라우저는 기본 줄바꿈으로 안전하게 폴백합니다.',
+        before:'nbsp — 한 폭에서만 유지', after:'text-wrap: pretty·balance — 모든 폭에서 유지', ref:'theory §13',
+        apply:() => { selectEl(bodyEl(), 'text-wrap: pretty·balance'); paper.classList.add('fix-textwrap'); } });
 
       // ④ 레이아웃 — 이미지 영역 제안 (theory §11)
       // 개수: 본문 약 1,000자당 1곳, 최대 4곳. 위치: 섹션 전환점(소제목 앞) 우선,
@@ -1365,7 +1388,7 @@
       });
       paper.innerHTML = lines.length ? lines.map(l => `<div>${esc(l)}</div>`).join('') : '';
       paper.setAttribute('contenteditable', 'true');
-      paper.classList.remove('fix-keepall','fix-measure','fix-leading','fix-rhythm');
+      paper.classList.remove('fix-keepall','fix-measure','fix-leading','fix-rhythm','fix-textwrap');
       selbox = null;
       barFill.style.width = '0';
       stepMeta.textContent = '편집 모드 — 글을 붙여넣은 뒤 ‘교정 시작’';
