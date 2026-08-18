@@ -113,7 +113,8 @@
     @supports (text-spacing-trim: trim-start) {
       .paper.fix-textwrap .post { text-spacing-trim: trim-start; }
     }
-    @supports (text-box-trim: trim-both) {
+    /* 게이트는 실제 쓰는 문법(단축)으로 물어야 한다 — longhand만 아는 엔진에서 무시되는 것 방지 */
+    @supports (text-box: trim-both cap alphabetic) {
       .paper.fix-textwrap .blk[data-role="title"],
       .paper.fix-textwrap .blk[data-role="heading"] { text-box: trim-both cap alphabetic; }
     }
@@ -536,7 +537,11 @@
       add(/\.{3,}(?=[가-힣A-Za-z])/g, 'ellipsisJoin');  // 말줄임표 뒤에 뒷말이 붙음 → … + 띄어쓰기 (국립국어원: 뒷말과 띄움)
       add(/\.{3,}/g, 'ellipsis');
       add(/(\d+)\.\s?:/g, 'numMarker');   // 어색한 번호 마커 1.: → 1.
-      add(/"([^"\n]{1,200})"/g, 'quote');
+      // 곧은따옴표 → 둥근따옴표. 코어 hygiene.mjs의 straight-quote-double과 동일 동작.
+      // 따옴표 위치만으로 좌→우 짝지으면 한 문장에 홀수 개일 때 인용이 아닌 본문을 통째로 묶는다
+      // (`곧은따옴표("")는 … 예를 들어 "U.S."` → `")는 … 예를 들어 "`). 경계 + 문장 넘김 금지로 막는다.
+      // hygiene.mjs는 guard로 거르지만 studio의 add()는 정규식만 받으므로 (?![.!?]\s)로 인코딩한다.
+      add(/(?<=^|[\s(\[{—–-])"((?:(?![.!?]\s)[^"\n]){1,100})"(?=$|[\s.,!?;:)\]}가-힣])/gm, 'quote');
       add(/ +([,.!?;:、。」』）)])/g, 'spacePunct');
       // 부호 뒤 띄어쓰기(다.특히 → 다. 특히): 다음 글자가 **한글일 때만** —
       // 라틴을 허용하면 영문 약어 U.S.를 "U. S."로 깨뜨린다 (theory §7).
