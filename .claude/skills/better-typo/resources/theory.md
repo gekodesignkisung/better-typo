@@ -91,6 +91,9 @@ studio가 같은 로직을 공유한다(단일 기준). 실측 대비 줄 수 �
 **경고 임계값**: 본문 비율 **< 1.5**이면 좁음(한글 기준), `< 1.3`이면 명백히 너무 좁음.
 단위 없는 숫자(`line-height: 1.6`)를 권장 — px 고정은 폰트 변경에 취약.
 
+같은 비율이라도 **폰트마다 실제로 보이는 줄 간격이 다르다** — 폰트가 자체 상하 여백을 갖기 때문이며,
+한글 폰트는 그 편차가 특히 크다. 이 변수를 없애려면 §13-2 `text-box-trim`을 참고한다.
+
 ---
 
 ## 5. 위계 / 타입 스케일 (type scale)
@@ -309,21 +312,34 @@ h1, h2, h3 { text-wrap: balance; }
 |---|---|---|---|
 | `text-spacing-trim: trim-start`(또는 `normal`) | CJK 전각 구두점(`。「」（）`) 내부 여백 자동 커닝 | Chromium 선행, 비-Baseline | §7 문장부호 — CSS 제안 |
 | `text-autospace: normal` | CJK↔라틴/숫자 사이 간격 자동 삽입 | 실험적, 비-Baseline | §1 혼합 문서 — **§1 glue와 조율 필요** |
-| `text-box-trim` + `text-box-edge` | 폰트 독립적 상하 여백(half-leading) 잘라 세로 리듬 정밀화 | Limited(비-Baseline) | §10 단락 리듬·§6 위계 — 제목/본문 광학 정렬 |
+| `text-box-trim` **+ `text-box-edge`(필수 동반)** | 폰트가 넣는 상하 여백을 잘라 **폰트별 편차를 제거** → §4 행간·§10 여백의 지정값이 그대로 보이게 한다. trim 값: `trim-start`·`trim-end`·`trim-both`·`none`. **적용 대상: 블록 컨테이너·인라인 박스 / 상속: 안 됨** | Limited(비-Baseline) | §4 행간·§10 단락 리듬의 전제 조건, §6 위계 — 제목/본문 광학 정렬 |
 | `hanging-punctuation: first last` | 첫/끝 구두점을 글줄 밖으로 걸어 광학 정렬 | **Safari 한정**(호환성 낮음) | §7 — "Safari 한정" 명시, 강제 안 함 |
 
 ```css
 @supports (text-spacing-trim: trim-start) {
   :root { text-spacing-trim: trim-start; }   /* CJK 구두점 커닝 */
 }
-@supports (text-box-trim: trim-both) {
-  h1, h2, h3 { text-box: trim-both cap alphabetic; }  /* 제목 상하 여백 정리 */
+/* 단축(text-box)을 쓰면 게이트도 단축으로 물어야 한다 — @supports는 문자열 파싱이라
+   longhand만 아는 엔진에서 게이트를 통과한 뒤 선언이 통째로 무시된다. */
+/* text-box-trim은 상속되지 않는다 — text-spacing-trim처럼 :root에 걸면 자식에게 전파되지 않아
+   아무 효과가 없다. 반드시 대상 요소(또는 그 요소를 포함하는 셀렉터)에 직접 건다. */
+@supports (text-box: trim-both cap alphabetic) {
+  h1, h2, h3 { text-box: trim-both cap alphabetic; }   /* 제목 상하 여백 정리 */
+  p, li      { text-box: trim-both cap alphabetic; }   /* 본문도 필요하면 직접 지정 */
 }
 ```
 
 - **`text-autospace` ↔ §1 glue 조율**: 둘 다 CJK↔숫자 경계를 다룬다. `text-autospace`는 *간격을
   넣고*, §1 glue는 *줄바꿈을 막는다* — 목적이 달라 공존 가능하지만, 혼합 문서에서 자동 간격을
   켤 때는 §1이 넣은 nbsp가 이중 간격을 만들지 않는지 확인한다(자동 간격 채택 시 순수 공백 유지).
+- **`text-box-trim`은 단독으로 무효**: trim은 *어느 모서리*를, `text-box-edge`가 *얼마나*를 정한다 —
+  edge 없이 trim만 걸면 지원 브라우저에서도 아무 일도 일어나지 않는다(미지원 폴백과는 성격이 다른
+  실패다). 반드시 `text-box` 단축이나 두 속성을 함께 제안한다.
+- **한글에서 특히 중요한 이유(§4·§5 연결)**: 폰트마다 자체 상하 여백이 달라 같은 `font-size`·
+  `line-height`라도 line box 높이가 달라진다. 한글 폰트는 이 편차가 라틴보다 크고(§5 — 어센더·
+  디센더 여백 관행이 제각각), 그래서 §4의 1.6–1.8 권장값이 폰트에 따라 다르게 **보인다**.
+  `text-box-trim`은 그 변수를 없애 §4·§10의 숫자를 신뢰할 수 있게 만드는 **전제 조건**이지,
+  이미 맞는 리듬에 얹는 장식이 아니다.
 - **`hanging-punctuation`**: Safari에서만 의미 있는 효과. 제안은 하되 "Safari 한정, 미지원 시 무효
   (레이아웃 안 깨짐)"를 근거에 적고 자동 적용하지 않는다.
 
