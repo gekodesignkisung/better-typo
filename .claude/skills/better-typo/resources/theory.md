@@ -280,18 +280,27 @@ LLM이 쓴 글에는 사람 글과 다른 미묘한 형태 습관이 있다. 여
 **역할 재정의 (핵심)**: CSS(전 폭 대응)가 1차, nbsp 삽입(§1·§2, 스크립트·런타임)은 폴백.
 지원 브라우저에서는 CSS가 처리하므로 **같은 지점에 nbsp를 중복 적용하지 않는다**(아래 중복 회피).
 
-### 13-1. 지금 채택 — Baseline Newly Available (2024-10~)
+### 13-1. 지금 채택 — Baseline Newly Available
 
-| 속성 | 값 | 대상 | 대체/보완하는 규칙 |
-|---|---|---|---|
-| `text-wrap` | `pretty` | 본문(p·li) | §2 마지막 줄 한 단어 — 고아를 브라우저가 자동 축소 |
-| `text-wrap` | `balance` | 제목·부제(h1~h3, ≤6줄) | 제목 줄 길이 균등 — 위계(§5·§6) 강화 |
+| 속성 | 값 | 대상 | Baseline | 대체/보완하는 규칙 |
+|---|---|---|---|---|
+| `text-wrap` | `pretty` | 본문(p·li) | 2024-03 | §2 마지막 줄 한 단어 — 고아를 브라우저가 자동 축소 |
+| `text-wrap` | `balance` | 제목·부제(h1~h3) | 2024-03 | 제목 줄 길이 균등 — 위계(§5·§6) 강화 |
+| `text-autospace` | `normal` | 본문 | **2025-11** | §1 혼합 문서 — CJK↔라틴/숫자 간격 자동 삽입 |
+
+**`balance` 줄 수 제한은 브라우저마다 다르다** — Chromium 6줄 이하, Firefox 10줄 이하에서만 동작한다
+(줄 수를 세어 균등화하는 계산 비용 때문). 제목은 대개 이 안에 들어오지만, 긴 부제에는 안 걸릴 수 있다.
+
+**`pretty`는 성능 비용이 있다** — MDN이 명시적으로 경고한다: 레이아웃 품질이 속도보다 중요한
+**긴 본문 블록에만** 쓰고, 짧은 텍스트나 성능이 중요한 화면에는 넣지 않는다.
 
 ```css
-/* 본문 */
+/* 본문 — pretty는 성능 비용이 있으므로 긴 본문 블록에만 */
 p, li { text-wrap: pretty; }
-/* 제목 — 짧은 다줄 제목의 균형 (6줄 이하에서만 동작) */
+/* 제목 — 다줄 제목의 균형 (Chromium 6줄·Firefox 10줄 이하에서만 동작) */
 h1, h2, h3 { text-wrap: balance; }
+/* 혼합 문서 — CJK↔라틴/숫자 사이 간격 (Baseline 2025-11). §1 glue와의 조율은 아래 참조 */
+body { text-autospace: normal; }
 ```
 
 - **효과**: `pretty`는 단락 마지막 줄에 한 단어만 남는 것을 브라우저가 줄인다 → §2 교정의 1차를
@@ -299,6 +308,13 @@ h1, h2, h3 { text-wrap: balance; }
 - **폴백**: Firefox는 `pretty` 미지원(2026 기준) → 미지원 시 기본 줄바꿈으로 **깨짐 없이 폴백**한다.
   따라서 `pretty`는 진보적 향상(progressive enhancement)이고, **Firefox·CJK 잔여분은 런타임
   스크립트(§2 nbsp)가 폴백으로 처리**한다 — 이 이중 구조가 정당한 이유다.
+- **`text-autospace` ↔ §1 glue 조율**: 둘 다 CJK↔라틴/숫자 경계를 다루지만 목적이 다르다 —
+  autospace는 *간격을 넣고*, §1 glue는 *줄바꿈을 막는다*. 명세상 기본 동작은 `insert`(기존 공백이
+  없을 때만 삽입)라 §1이 넣은 nbsp와 겹치지 않는다. 명세에 있는 `replace`(기존 공백 대체)는
+  nbsp까지 바꿔 glue를 풀 수 있으므로 **쓰지 않는다**.
+  **단, 현재 구현은 `normal`뿐이다** — Chrome 151 실측에서 `insert`·`replace`·`ideograph-alpha`
+  등 세부 값은 `CSS.supports`가 전부 false다. 따라서 지금은 `normal`만 제안하고, 세부 값은
+  구현이 따라온 뒤 재검토한다.
 - **중복 회피**: 본문에 `text-wrap: pretty`가 적용돼 있으면(그리고 대상이 그 CSS를 실제로 받는
   브라우저면) §2 orphan nbsp 제안을 **보류**한다 — 둘 다 걸면 좁은 폭에서 과교정된다. 확신이
   없으면(정적 폴백·구형 지원 불명) nbsp를 유지해 안전을 택한다.
@@ -310,14 +326,13 @@ h1, h2, h3 { text-wrap: balance; }
 
 | 속성 | 효과 | 2026-08 지원 | 반영 규칙 |
 |---|---|---|---|
-| `text-spacing-trim: trim-start`(또는 `normal`) | CJK 전각 구두점(`。「」（）`) 내부 여백 자동 커닝 | Chromium 선행, 비-Baseline | §7 문장부호 — CSS 제안 |
-| `text-autospace: normal` | CJK↔라틴/숫자 사이 간격 자동 삽입 | 실험적, 비-Baseline | §1 혼합 문서 — **§1 glue와 조율 필요** |
+| `text-spacing-trim: normal` | CJK 전각 구두점(`。「」（）`) 내부 여백 자동 커닝 | Chromium 선행, 비-Baseline | §7 문장부호 — CSS 제안 |
 | `text-box-trim` **+ `text-box-edge`(필수 동반)** | 폰트가 넣는 상하 여백을 잘라 **폰트별 편차를 제거** → §4 행간·§10 여백의 지정값이 그대로 보이게 한다. trim 값: `trim-start`·`trim-end`·`trim-both`·`none`. **적용 대상: 블록 컨테이너·인라인 박스 / 상속: 안 됨** | Limited(비-Baseline) | §4 행간·§10 단락 리듬의 전제 조건, §6 위계 — 제목/본문 광학 정렬 |
-| `hanging-punctuation: first last` | 첫/끝 구두점을 글줄 밖으로 걸어 광학 정렬 | **Safari 한정**(호환성 낮음) | §7 — "Safari 한정" 명시, 강제 안 함 |
+| `hanging-punctuation: allow-end` | 줄 끝 마침표·쉼표(CJK 구두점 포함)를 글줄 밖으로 걸어 광학 정렬 | **Safari 한정**(호환성 낮음) | §7 — "Safari 한정" 명시, 강제 안 함 |
 
 ```css
-@supports (text-spacing-trim: trim-start) {
-  :root { text-spacing-trim: trim-start; }   /* CJK 구두점 커닝 */
+@supports (text-spacing-trim: normal) {
+  :root { text-spacing-trim: normal; }   /* CJK 구두점 커닝 — 상속되므로 :root 정당 */
 }
 /* 단축(text-box)을 쓰면 게이트도 단축으로 물어야 한다 — @supports는 문자열 파싱이라
    longhand만 아는 엔진에서 게이트를 통과한 뒤 선언이 통째로 무시된다. */
@@ -329,9 +344,14 @@ h1, h2, h3 { text-wrap: balance; }
 }
 ```
 
-- **`text-autospace` ↔ §1 glue 조율**: 둘 다 CJK↔숫자 경계를 다룬다. `text-autospace`는 *간격을
-  넣고*, §1 glue는 *줄바꿈을 막는다* — 목적이 달라 공존 가능하지만, 혼합 문서에서 자동 간격을
-  켤 때는 §1이 넣은 nbsp가 이중 간격을 만들지 않는지 확인한다(자동 간격 채택 시 순수 공백 유지).
+- **`text-spacing-trim` 값 주의**: `normal`은 여는 구두점을 줄 시작에서 **전각 유지**하고,
+  `trim-start`는 **반각으로 줄인다** — 반대 동작이므로 "또는"으로 묶어 쓸 수 없다. 기본은 `normal`.
+- **`text-spacing-trim`은 폰트 의존**: OpenType `halt` 또는 `chws` 피처가 없는 폰트에서는 과도한
+  커닝을 피하려고 **속성 자체가 비활성화**된다. 한글 폰트는 이 피처가 없는 경우가 많아, 지원
+  브라우저에서도 효과가 없을 수 있다 — 제안 시 이 조건을 근거에 적는다.
+- **`hanging-punctuation` 값 선택**: 한국어 본문에는 `allow-end`가 맞다 — 줄 끝 마침표·쉼표
+  (`U+3002`·`U+FF0C` 등 CJK 구두점 포함)를 글줄 밖으로 건다. `first`/`last`는 여는·닫는 따옴표와
+  괄호가 대상이라 목적이 다르다(인용 많은 문서라면 `first last`를 함께 고려).
 - **`text-box-trim`은 단독으로 무효**: trim은 *어느 모서리*를, `text-box-edge`가 *얼마나*를 정한다 —
   edge 없이 trim만 걸면 지원 브라우저에서도 아무 일도 일어나지 않는다(미지원 폴백과는 성격이 다른
   실패다). 반드시 `text-box` 단축이나 두 속성을 함께 제안한다.
@@ -367,6 +387,6 @@ h1, h2, h3 { text-wrap: balance; }
 | ai-tell (§12, 기호: 엠대시·화살표·이모지) | 낮음 | 가능 |
 | ai-tell (§12, 문체: 상투어·필러) | 높음 | 제안 (사람 검토, 강제 안 함) |
 | orphan-widow | 중간 | 제안 (§13-1 text-wrap: pretty 적용 시 보류) |
-| css-text-modern (§13-1, text-wrap pretty/balance) | 낮음 | 제안 (css-rule — 사람이 위치 승인) |
-| css-text-modern (§13-2, spacing-trim·text-box·autospace·hanging) | 중간 | 제안 (@supports로 감싸 제안, 강제 안 함) |
+| css-text-modern (§13-1, text-wrap pretty/balance·text-autospace) | 낮음 | 제안 (css-rule — 사람이 위치 승인) |
+| css-text-modern (§13-2, spacing-trim·text-box·hanging) | 중간 | 제안 (@supports로 감싸 제안, 강제 안 함) |
 | spelling | 높음 | 제안 (사람 검토) |

@@ -109,9 +109,12 @@
     .paper.fix-textwrap .blk[data-role="title"],
     .paper.fix-textwrap .blk[data-role="subtitle"],
     .paper.fix-textwrap .blk[data-role="heading"] { text-wrap: balance; }
+    /* CJK↔라틴/숫자 간격 (Baseline 2025-11). 기본값 insert가 기존 공백을 보존해 §1 nbsp와 안 겹침 */
+    .paper.fix-textwrap .post { text-autospace: normal; }
     /* §13-2(진보적 향상): 지원 브라우저에서만. CJK 구두점 커닝 + 제목 상하 여백 정리. */
-    @supports (text-spacing-trim: trim-start) {
-      .paper.fix-textwrap .post { text-spacing-trim: trim-start; }
+    @supports (text-spacing-trim: normal) {
+      /* normal = 여는 구두점 전각 유지. trim-start는 반각으로 줄이는 반대 동작이라 기본값은 normal */
+      .paper.fix-textwrap .post { text-spacing-trim: normal; }
     }
     /* 게이트는 실제 쓰는 문법(단축)으로 물어야 한다 — longhand만 아는 엔진에서 무시되는 것 방지 */
     @supports (text-box: trim-both cap alphabetic) {
