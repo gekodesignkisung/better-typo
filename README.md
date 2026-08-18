@@ -151,12 +151,14 @@ approve)을 거친다.
 스튜디오가 모두 동일한 숫자·단위 집합·오타 사전을 인용한다.
 
 **최신 CSS Text 기능 (§13, 2026-08 Baseline 기준)**: nbsp 삽입이 한 폭에서만 맞는 것과 달리,
-`text-wrap: pretty`(본문 마지막 줄 한 단어 자동 축소)·`balance`(제목 줄 균형)는 **모든 화면 폭에서**
-브라우저가 다듬는다 — Baseline Newly Available(2024-10)이라 바로 채택하고, 미지원(예: Firefox의
-pretty)은 안전 폴백된다. 아직 비-Baseline인 `text-spacing-trim`(CJK 구두점 커닝)·`text-box-trim`
-(폰트마다 다른 상하 여백을 잘라 **§4 행간·§10 여백의 지정값이 그대로 보이게** 한다 — 한글 폰트는 이
-편차가 커서 같은 `line-height`도 다르게 보인다)·`text-autospace`·`hanging-punctuation`은 `@supports`로
-감싸 진보적 향상으로만 제안한다. 이때 **게이트는 실제 쓸 문법과 같아야 한다** — `text-box` 단축을 쓰면
+`text-wrap: pretty`(본문 마지막 줄 한 단어 자동 축소)·`balance`(제목 줄 균형)·`text-autospace`
+(CJK↔라틴/숫자 간격, Baseline 2025-11)는 **모든 화면 폭에서** 브라우저가 다듬는다 — Baseline Newly
+Available이라 바로 채택하고, 미지원은 안전 폴백된다. 단 `balance`의 줄 수 제한은 브라우저마다 다르고
+(Chromium 6줄·Firefox 10줄), `pretty`는 성능 비용이 있어 긴 본문에만 쓴다. 아직 비-Baseline인
+`text-spacing-trim`(CJK 구두점 커닝 — 값은 `normal`이며 OpenType `halt`/`chws` 없는 폰트에선 비활성)·
+`text-box-trim`(폰트마다 다른 상하 여백을 잘라 **§4 행간·§10 여백의 지정값이 그대로 보이게** 한다 —
+한글 폰트는 이 편차가 커서 같은 `line-height`도 다르게 보인다)·`hanging-punctuation`(한국어 본문엔
+`allow-end`)은 `@supports`로 감싸 진보적 향상으로만 제안한다. 이때 **게이트는 실제 쓸 문법과 같아야 한다** — `text-box` 단축을 쓰면
 `@supports (text-box: ...)`로 물어야 longhand만 아는 엔진에서 무시되지 않는다. 전부 `css-rule`이라
 자동 삽입하지 않고 사람이 위치를 승인한다.
 
